@@ -59,7 +59,13 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
   final Map<num, FocusNode> _noColorNodes = {};
 
   bool get _isCreate => widget.createOrder != null;
-  bool get _dirty => !mapEquals(_qty, _initialQty);
+  bool get _dirty {
+    if (_qty.length != _initialQty.length) return true;
+    for (final e in _qty.entries) {
+      if (_initialQty[e.key] != e.value) return true;
+    }
+    return false;
+  }
 
   FocusNode _nodeFor(num id) => _noColorNodes.putIfAbsent(id, () => FocusNode());
 
