@@ -50,15 +50,34 @@ class OfflineQueueEditScreen extends StatefulWidget {
 
 class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
   final Map<String, int> _qty = {};
+  Map<String, int> _initialQty = {};
   List<_QGroup> _groups = [];
   String _title = '';
   String _search = '';
   bool _loaded = false;
   bool _saving = false;
+  final Map<num, FocusNode> _noColorNodes = {};
 
   bool get _isCreate => widget.createOrder != null;
+  bool get _dirty => !mapEquals(_qty, _initialQty);
+
+  FocusNode _nodeFor(num id) => _noColorNodes.putIfAbsent(id, () => FocusNode());
+
+  FocusNode? _nextNoColor(List<num> ids, num id) {
+    final idx = ids.indexOf(id);
+    if (idx >= 0 && idx + 1 < ids.length) return _nodeFor(ids[idx + 1]);
+    return null;
+  }
 
   String _key(num? pid, num? cid) => '${pid}_${cid ?? 'no'}';
+
+  @override
+  void dispose() {
+    for (final n in _noColorNodes.values) {
+      n.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -172,6 +191,7 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
     if (mounted) {
       setState(() {
         _groups = map.values.toList();
+        _initialQty = Map<String, int>.from(_qty);
         _loaded = true;
       });
     }
@@ -275,7 +295,7 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
                 Expanded(child: _list()),
               ],
             ),
-      bottomNavigationBar: !_loaded
+      bottomNavigationBar: (!_loaded || !_dirty)
           ? null
           : Container(
               padding: EdgeInsets.fromLTRB(14.w, 11.h, 14.w, 16.h),
@@ -305,6 +325,8 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
             style: AppText.inter(size: 13, color: AppColors.ink3)),
       );
     }
+    final noColorIds =
+        groups.where((g) => !g.hasColor).map((g) => g.productId).toList();
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(14.w, 4.h, 14.w, 16.h),
       itemCount: groups.length,
@@ -345,6 +367,8 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
                           0,
                   onChanged: (v) => setState(() => _qty[
                       _key(g.lines.first.productId, g.lines.first.colorId)] = v),
+                  focusNode: _nodeFor(g.productId),
+                  nextFocusNode: _nextNoColor(noColorIds, g.productId),
                 ),
             ],
           ),
@@ -430,10 +454,14 @@ class _InlineQty extends StatelessWidget {
   final _QLine line;
   final int value;
   final ValueChanged<int> onChanged;
+  final FocusNode? focusNode;
+  final FocusNode? nextFocusNode;
   const _InlineQty({
     required this.line,
     required this.value,
     required this.onChanged,
+    this.focusNode,
+    this.nextFocusNode,
   });
 
   @override
@@ -447,8 +475,17 @@ class _InlineQty extends StatelessWidget {
         SizedBox(width: 10.w),
         QtyField(
           value: value,
-          textInputAction: TextInputAction.next,
-          onSubmitted: () => FocusScope.of(context).nextFocus(),
+          focusNode: focusNode,
+          textInputAction: nextFocusNode != null
+              ? TextInputAction.next
+              : TextInputAction.done,
+          onSubmitted: () {
+            if (nextFocusNode != null) {
+              nextFocusNode!.requestFocus();
+            } else {
+              FocusScope.of(context).unfocus();
+            }
+          },
           onChanged: onChanged,
         ),
       ],

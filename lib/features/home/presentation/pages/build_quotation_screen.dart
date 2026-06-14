@@ -38,6 +38,9 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
   final ProductQuantityCubit _cubit = ProductQuantityCubit();
   String _search = '';
   bool _saving = false;
+  final Map<num, FocusNode> _noColorNodes = {};
+
+  FocusNode _nodeFor(num id) => _noColorNodes.putIfAbsent(id, () => FocusNode());
 
   @override
   void initState() {
@@ -51,6 +54,9 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
 
   @override
   void dispose() {
+    for (final n in _noColorNodes.values) {
+      n.dispose();
+    }
     _cubit.close();
     super.dispose();
   }
@@ -131,7 +137,7 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
       showDesignToast(context,
           '${'saved_offline'.tr()} · ${_cubit.state.totalQuantity} ${'queued_units'.tr()}',
           amber: true);
-      NavigationService.navigateAndRemoveUntil(destination: const HomeShell());
+      NavigationService.navigateAndRemoveUntil(destination: const HomeShell(initialIndex: 1));
     }
   }
 
@@ -145,7 +151,7 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
             showDesignToast(context,
                 '${'quotation_created'.tr()} · ${_cubit.state.totalQuantity} ${'units_word'.tr()}');
             NavigationService.navigateAndRemoveUntil(
-                destination: const HomeShell());
+                destination: const HomeShell(initialIndex: 1));
           } else if (state is CreateSaleOrderFailureState) {
             if (mounted) setState(() => _saving = false);
             showDesignToast(context, state.errorMessage, amber: true);
@@ -191,16 +197,33 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
                                     size: 13, color: AppColors.ink3)),
                           );
                         }
+                        final noColorIds = products
+                            .where((p) => p.colors.isEmpty)
+                            .map((p) => p.productTmplId ?? -1)
+                            .toList();
                         return ListView.builder(
                           padding: EdgeInsets.fromLTRB(14.w, 4.h, 14.w, 90.h),
                           itemCount: products.length,
                           itemBuilder: (context, i) {
                             final p = products[i];
+                            FocusNode? node;
+                            FocusNode? nextNode;
+                            if (p.colors.isEmpty) {
+                              final id = p.productTmplId ?? -1;
+                              node = _nodeFor(id);
+                              final idx = noColorIds.indexOf(id);
+                              if (idx >= 0 && idx + 1 < noColorIds.length) {
+                                nextNode = _nodeFor(noColorIds[idx + 1]);
+                              }
+                            }
                             return _ProductCard(
                               key: ValueKey('p_${p.productTmplId}'),
                               product: p,
                               total: _totalFor(s, p),
-                              onTap: p.colors.isEmpty ? null : () => _openSheet(p),
+                              onTap:
+                                  p.colors.isEmpty ? null : () => _openSheet(p),
+                              focusNode: node,
+                              nextFocusNode: nextNode,
                             );
                           },
                         );
@@ -287,11 +310,15 @@ class _ProductCard extends StatelessWidget {
   final ProductModel product;
   final int total;
   final VoidCallback? onTap;
+  final FocusNode? focusNode;
+  final FocusNode? nextFocusNode;
   const _ProductCard({
     super.key,
     required this.product,
     required this.total,
     this.onTap,
+    this.focusNode,
+    this.nextFocusNode,
   });
 
   @override
@@ -337,7 +364,10 @@ class _ProductCard extends StatelessWidget {
           if (hasColors)
             _SwatchStrip(colors: product.colors)
           else
-            _InlineQty(product: product),
+            _InlineQty(
+                product: product,
+                focusNode: focusNode,
+                nextFocusNode: nextFocusNode),
         ],
       ),
     );
@@ -346,7 +376,9 @@ class _ProductCard extends StatelessWidget {
 
 class _InlineQty extends StatelessWidget {
   final ProductModel product;
-  const _InlineQty({required this.product});
+  final FocusNode? focusNode;
+  final FocusNode? nextFocusNode;
+  const _InlineQty({required this.product, this.focusNode, this.nextFocusNode});
 
   @override
   Widget build(BuildContext context) {
@@ -363,8 +395,17 @@ class _InlineQty extends StatelessWidget {
         QtyField(
           key: ValueKey('qty_${product.productTmplId}_nocolor'),
           value: cubit.getQuantity(product.productTmplId, null),
-          textInputAction: TextInputAction.next,
-          onSubmitted: () => FocusScope.of(context).nextFocus(),
+          focusNode: focusNode,
+          textInputAction: nextFocusNode != null
+              ? TextInputAction.next
+              : TextInputAction.done,
+          onSubmitted: () {
+            if (nextFocusNode != null) {
+              nextFocusNode!.requestFocus();
+            } else {
+              FocusScope.of(context).unfocus();
+            }
+          },
           onChanged: (v) => cubit.updateQuantity(product, null, v.toString()),
         ),
       ],

@@ -47,8 +47,21 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
   late final List<_ProductGroup> _groups;
   String _search = '';
   bool _saving = false;
+  final Map<num, FocusNode> _noColorNodes = {};
+  late final Map<String, int> _initialQty;
+
+  FocusNode _nodeFor(num id) => _noColorNodes.putIfAbsent(id, () => FocusNode());
+  bool get _dirty => !mapEquals(_qty, _initialQty);
 
   String _key(num? pid, num? cid) => '${pid}_${cid ?? 'no'}';
+
+  @override
+  void dispose() {
+    for (final n in _noColorNodes.values) {
+      n.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -62,6 +75,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
         .map((e) => _ProductGroup(
             e.key, e.value.first.productName ?? '', e.value))
         .toList();
+    _initialQty = Map<String, int>.from(_qty);
   }
 
   int get _units => _qty.values.fold(0, (s, v) => s + v);
@@ -72,6 +86,12 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
       t += _qty[_key(m.productTmplId, m.colorId)] ?? 0;
     }
     return t;
+  }
+
+  FocusNode? _nextNoColor(List<num> ids, num id) {
+    final idx = ids.indexOf(id);
+    if (idx >= 0 && idx + 1 < ids.length) return _nodeFor(ids[idx + 1]);
+    return null;
   }
 
   void _openSheet(_ProductGroup g) {
@@ -130,7 +150,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
       );
       if (!mounted) return;
       showDesignToast(context, 'edited_offline_queued'.tr(), amber: true);
-      NavigationService.navigateAndRemoveUntil(destination: const HomeShell());
+      NavigationService.navigateAndRemoveUntil(destination: const HomeShell(initialIndex: 1));
     }
   }
 
@@ -149,7 +169,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
             showDesignToast(context, 'quotation_updated'.tr());
           }
           NavigationService.navigateAndRemoveUntil(
-              destination: const HomeShell());
+              destination: const HomeShell(initialIndex: 1));
         } else if (state is UpdateSaleOrderFailureState) {
           if (mounted) setState(() => _saving = false);
           showDesignToast(context, state.errorMessage, amber: true);
@@ -172,7 +192,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
             ),
           ],
         ),
-        bottomNavigationBar: widget.readOnly
+        bottomNavigationBar: (widget.readOnly || !_dirty)
             ? null
             : Container(
                 padding: EdgeInsets.fromLTRB(14.w, 11.h, 14.w, 16.h),
@@ -204,6 +224,8 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
     if (groups.isEmpty) {
       return _empty('no_products_found'.tr());
     }
+    final noColorIds =
+        groups.where((g) => !g.hasColor).map((g) => g.productId).toList();
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(14.w, 4.h, 14.w, 16.h),
       itemCount: groups.length,
@@ -247,6 +269,8 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
                   onChanged: (v) => setState(() => _qty[_key(
                       g.movements.first.productTmplId,
                       g.movements.first.colorId)] = v),
+                  focusNode: _nodeFor(g.productId),
+                  nextFocusNode: _nextNoColor(noColorIds, g.productId),
                 ),
             ],
           ),
@@ -389,10 +413,14 @@ class _InlineQty extends StatelessWidget {
   final ColorMovementModel movement;
   final int value;
   final ValueChanged<int> onChanged;
+  final FocusNode? focusNode;
+  final FocusNode? nextFocusNode;
   const _InlineQty({
     required this.movement,
     required this.value,
     required this.onChanged,
+    this.focusNode,
+    this.nextFocusNode,
   });
 
   @override
@@ -408,8 +436,17 @@ class _InlineQty extends StatelessWidget {
         SizedBox(width: 10.w),
         QtyField(
           value: value,
-          textInputAction: TextInputAction.next,
-          onSubmitted: () => FocusScope.of(context).nextFocus(),
+          focusNode: focusNode,
+          textInputAction: nextFocusNode != null
+              ? TextInputAction.next
+              : TextInputAction.done,
+          onSubmitted: () {
+            if (nextFocusNode != null) {
+              nextFocusNode!.requestFocus();
+            } else {
+              FocusScope.of(context).unfocus();
+            }
+          },
           onChanged: onChanged,
         ),
       ],
@@ -479,35 +516,43 @@ class _ViewCard extends StatelessWidget {
           if (colors.isNotEmpty) ...[
             SizedBox(height: 10.h),
             const Divider(height: 1, color: AppColors.line2),
-            SizedBox(height: 6.h),
-            ...colors.map((c) => Padding(
-                  padding: EdgeInsets.symmetric(vertical: 5.h),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 16.w,
-                        height: 16.w,
+            SizedBox(height: 8.h),
+            Wrap(
+              spacing: 6.w,
+              runSpacing: 6.h,
+              children: colors
+                  .map((c) => Container(
+                        padding:
+                            EdgeInsets.fromLTRB(5.w, 3.h, 9.w, 3.h),
                         decoration: BoxDecoration(
-                          color: c.color,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: AppColors.ink.withOpacity(0.12)),
+                          color: AppColors.field,
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(color: AppColors.line),
                         ),
-                      ),
-                      SizedBox(width: 9.w),
-                      Expanded(
-                        child: Text(c.label,
-                            style: AppText.mono(
-                                size: 12.5, color: AppColors.ink2)),
-                      ),
-                      Text('×${c.qty}',
-                          style: AppText.mono(
-                              size: 12.5,
-                              weight: FontWeight.w700,
-                              color: AppColors.ink)),
-                    ],
-                  ),
-                )),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 14.w,
+                              height: 14.w,
+                              decoration: BoxDecoration(
+                                color: c.color,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: AppColors.ink.withOpacity(0.12)),
+                              ),
+                            ),
+                            SizedBox(width: 6.w),
+                            Text('${c.label} ×${c.qty}',
+                                style: AppText.mono(
+                                    size: 11.5,
+                                    weight: FontWeight.w600,
+                                    color: AppColors.ink)),
+                          ],
+                        ),
+                      ))
+                  .toList(),
+            ),
           ],
         ],
       ),
