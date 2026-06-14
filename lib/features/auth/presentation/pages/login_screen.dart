@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,7 +7,6 @@ import '../../../../core/constants/preferences_keys.dart';
 import '../../../../core/helpers/navigator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
-import '../../../../core/utils/network_cubit/network_cubit.dart';
 import '../../../../core/utils/shared_preferences_manger.dart';
 import '../../../../core/utils/toast_manager.dart';
 import '../../../../core/widgets/design/design_widgets.dart';
@@ -46,7 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final online = context.watch<NetworkCubit>().state;
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is LoginSuccessState) {
@@ -73,16 +72,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const BrandLogo(),
                     SizedBox(height: 6.h),
-                    Text('Field order builder',
+                    Text('tagline'.tr(),
                         style: AppText.inter(size: 13, color: AppColors.ink3)),
                     SizedBox(height: 24.h),
                     _Field(
-                      label: 'Login',
+                      label: 'login_field'.tr(),
                       icon: Icons.person_outline,
                       controller: _usernameController,
                     ),
                     _Field(
-                      label: 'Password',
+                      label: 'password_field'.tr(),
                       icon: Icons.lock_outline,
                       controller: _passwordController,
                       obscure: _obscure,
@@ -91,12 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     SizedBox(height: 18.h),
                     PrimaryCta(
-                      label: loading ? 'Signing in…' : 'Sign in',
+                      label: loading ? 'loading'.tr() : 'sign_in'.tr(),
                       icon: loading ? null : Icons.chevron_right,
                       onPressed: loading ? null : _signIn,
                     ),
-                    SizedBox(height: 16.h),
-                    _OfflineNote(online: online),
                   ],
                 ),
               ),
@@ -173,53 +170,6 @@ class _Field extends StatelessWidget {
                         color: AppColors.ink3),
                   ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OfflineNote extends StatelessWidget {
-  final bool online;
-  const _OfflineNote({required this.online});
-
-  @override
-  Widget build(BuildContext context) {
-    final user = sl<SharedPreferencesService>().getUser();
-    final last = user?.userName;
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: AppColors.tealTint,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFD9D3E8)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.cloud_done_outlined, size: 17.sp, color: AppColors.teal),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: AppText.inter(
-                    size: 12, color: AppColors.tealDark, height: 1.4),
-                children: [
-                  TextSpan(
-                      text: 'Works offline. ',
-                      style: AppText.inter(
-                          size: 12,
-                          weight: FontWeight.w600,
-                          color: AppColors.tealDark)),
-                  TextSpan(
-                    text: last != null
-                        ? 'Signed in last as $last. Keep building orders with no connection.'
-                        : 'Keep building orders with no connection — they sync when you are back online.',
-                  ),
-                ],
-              ),
             ),
           ),
         ],

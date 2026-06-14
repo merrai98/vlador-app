@@ -40,9 +40,8 @@ class SyncScreen extends StatefulWidget {
 
 class _SyncScreenState extends State<SyncScreen> {
   bool _syncing = false;
-  bool _done = false;
-  int _created = 0;
-  int _updated = 0;
+  bool _showResult = false;
+  int _conflicts = 0;
 
   Future<List<_QueueItem>> _buildQueue() async {
     final creates = HiveManager().getAllSavedSaleOrders();
@@ -55,8 +54,8 @@ class _SyncScreenState extends State<SyncScreen> {
       final units =
           o.colorMovements.fold<num>(0, (s, m) => s + m.quantity).toInt();
       items.add(_QueueItem(
-        title: 'New quotation',
-        detail: '${names[o.partnerId] ?? 'Partner #${o.partnerId}'} · $units units',
+        title: 'new_quotation'.tr(),
+        detail: '${names[o.partnerId] ?? 'Partner #${o.partnerId}'} · $units ${'units_word'.tr()}',
         isCreate: true,
         createOrder: o,
       ));
@@ -65,8 +64,8 @@ class _SyncScreenState extends State<SyncScreen> {
       final units =
           o.colorMovements.fold<num>(0, (s, m) => s + m.quantity).toInt();
       items.add(_QueueItem(
-        title: 'Edit order #${o.saleOrderId}',
-        detail: '$units units',
+        title: '${'edit_order'.tr()} #${o.saleOrderId}',
+        detail: '$units ${'units_word'.tr()}',
         isCreate: false,
         updateOrder: o,
       ));
@@ -75,11 +74,9 @@ class _SyncScreenState extends State<SyncScreen> {
   }
 
   void _runSync() {
-    _created = HiveManager().getAllSavedSaleOrders().length;
-    _updated = HiveManager().getAllSavedUpdateSaleOrders().length;
     setState(() {
       _syncing = true;
-      _done = false;
+      _showResult = false;
     });
     context.read<HomeBloc>().add(SyncOfflineOrdersEvent());
     context.read<NetworkCubit>().refresh();
@@ -112,10 +109,16 @@ class _SyncScreenState extends State<SyncScreen> {
             if (state is SyncOfflineOrdersSuccessState) {
               setState(() {
                 _syncing = false;
-                _done = true;
+                _showResult = true;
+                _conflicts = state.conflicts;
               });
-              showDesignToast(context,
-                  '$_created created · $_updated updated · synced');
+              showDesignToast(
+                context,
+                state.conflicts > 0
+                    ? '${state.conflicts} ${'orders_rejected_350'.tr()}'
+                    : 'synced_up_to_date'.tr(),
+                amber: state.conflicts > 0,
+              );
             } else if (state is SyncOfflineOrdersFailureState) {
               setState(() => _syncing = false);
               showDesignToast(context, state.errorMessage, amber: true);
@@ -142,10 +145,9 @@ class _SyncScreenState extends State<SyncScreen> {
                 DesignAppBar(
                   leading: const MarkerSquare(
                       text: '↑', color: AppColors.amber),
-                  label: 'Sync',
-                  title: '${items.length} pending change'
-                      '${items.length == 1 ? '' : 's'}',
-                  trailing: Text(online ? 'ONLINE' : 'OFFLINE',
+                  label: 'sync_tab'.tr(),
+                  title: '${items.length} ${'pending_changes'.tr()}',
+                  trailing: Text(online ? 'online_caps'.tr() : 'offline_caps'.tr(),
                       style: AppText.mono(
                           size: 11,
                           color: online ? AppColors.good : AppColors.amberDeep)),
@@ -159,21 +161,21 @@ class _SyncScreenState extends State<SyncScreen> {
                           padding: EdgeInsets.only(bottom: 12.h),
                           child: PrimaryCta(
                             label: !online
-                                ? 'Connect to sync'
+                                ? 'connect_to_sync'.tr()
                                 : _syncing
-                                    ? 'Syncing…'
-                                    : 'Sync now',
+                                    ? 'syncing_orders'.tr()
+                                    : 'sync_now'.tr(),
                             icon: Icons.refresh,
                             amber: !online,
                             onPressed:
                                 (!online || _syncing) ? null : _runSync,
                           ),
                         ),
-                      if (items.isEmpty && !_done)
+                      if (items.isEmpty && !_showResult)
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 24.h),
                           child: Center(
-                            child: Text('Nothing waiting to sync',
+                            child: Text('nothing_to_sync'.tr(),
                                 style: AppText.inter(
                                     size: 13, color: AppColors.ink3)),
                           ),
@@ -183,9 +185,9 @@ class _SyncScreenState extends State<SyncScreen> {
                             syncing: _syncing,
                             onTap: _syncing ? null : () => _editItem(it),
                           )),
-                      if (_done) ...[
+                      if (_showResult && _conflicts > 0) ...[
                         SizedBox(height: 8.h),
-                        _Summary(created: _created, updated: _updated),
+                        const _ConflictNote(),
                       ],
                       SizedBox(height: 16.h),
                       _LanguageTile(),
@@ -255,7 +257,7 @@ class _QueueRow extends StatelessWidget {
                   strokeWidth: 2, color: AppColors.teal),
             )
           else ...[
-            Text('queued',
+            Text('queued'.tr(),
                 style: AppText.mono(size: 11, color: AppColors.ink3)),
             SizedBox(width: 8.w),
             Icon(Icons.edit_outlined, size: 16.sp, color: AppColors.ink3),
@@ -266,38 +268,28 @@ class _QueueRow extends StatelessWidget {
   }
 }
 
-class _Summary extends StatelessWidget {
-  final int created;
-  final int updated;
-  const _Summary({required this.created, required this.updated});
-
-  Widget _row(String label, String value, Color color) => Padding(
-        padding: EdgeInsets.symmetric(vertical: 5.h),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label, style: AppText.inter(size: 13, color: AppColors.ink2)),
-            Text(value,
-                style: AppText.mono(
-                    size: 13, weight: FontWeight.w700, color: color)),
-          ],
-        ),
-      );
+class _ConflictNote extends StatelessWidget {
+  const _ConflictNote();
 
   @override
   Widget build(BuildContext context) {
-    return DesignCard(
-      radius: 14,
-      padding: EdgeInsets.all(14.w),
-      child: Column(
+    return Container(
+      padding: EdgeInsets.all(13.w),
+      decoration: BoxDecoration(
+        color: AppColors.lockWash,
+        borderRadius: BorderRadius.circular(14.r),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _row('Created', '$created', AppColors.good),
-          _row('Updated', '$updated', AppColors.good),
-          SizedBox(height: 6.h),
-          Text(
-            'Server-confirmed orders return 350 and are removed from the queue; duplicate them to start a fresh draft.',
-            style:
-                AppText.inter(size: 11.5, color: AppColors.ink3, height: 1.4),
+          Icon(Icons.lock_outline, size: 16.sp, color: AppColors.lock),
+          SizedBox(width: 9.w),
+          Expanded(
+            child: Text(
+              'conflict_350_note'.tr(),
+              style: AppText.inter(
+                  size: 12, color: AppColors.lock, height: 1.4),
+            ),
           ),
         ],
       ),
@@ -318,7 +310,7 @@ class _LanguageTile extends StatelessWidget {
           children: [
             SizedBox(height: 12.h),
             ListTile(
-              title: const Text('English'),
+              title: Text('english'.tr()),
               trailing: context.locale.languageCode == 'en'
                   ? const Icon(Icons.check, color: AppColors.teal)
                   : null,
@@ -328,7 +320,7 @@ class _LanguageTile extends StatelessWidget {
               },
             ),
             ListTile(
-              title: const Text('العربية'),
+              title: Text('arabic_name'.tr()),
               trailing: context.locale.languageCode == 'ar'
                   ? const Icon(Icons.check, color: AppColors.teal)
                   : null,
@@ -354,7 +346,7 @@ class _LanguageTile extends StatelessWidget {
           Icon(Icons.language, size: 20.sp, color: AppColors.teal),
           SizedBox(width: 12.w),
           Expanded(
-            child: Text('Language',
+            child: Text('language'.tr(),
                 style: AppText.inter(size: 14, weight: FontWeight.w500)),
           ),
           Icon(Icons.chevron_right, size: 18.sp, color: AppColors.ink3),
@@ -376,7 +368,7 @@ class _LogoutButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onTap,
         icon: Icon(Icons.logout, size: 16.sp, color: AppColors.lock),
-        label: Text('Log out',
+        label: Text('logout'.tr(),
             style: AppText.inter(
                 size: 13.5, weight: FontWeight.w600, color: AppColors.lock)),
         style: OutlinedButton.styleFrom(

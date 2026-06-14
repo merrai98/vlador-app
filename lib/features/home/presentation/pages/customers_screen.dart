@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -49,7 +50,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
             text: initialsOf(user?.userName),
             color: AppColors.teal,
           ),
-          label: 'Signed in',
+          label: 'signed_in'.tr(),
           title: user?.userName ?? 'Valdor',
           trailing: CircleIconButton(icon: Icons.refresh, onPressed: _pull),
         ),
@@ -73,12 +74,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   return ListView(
                     padding: EdgeInsets.fromLTRB(14.w, 4.h, 14.w, 16.h),
                     children: [
-                      SectionLabel('Customers · ${partners.length}'),
+                      SectionLabel('${'customers'.tr()} · ${partners.length}'),
                       if (partners.isEmpty)
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 30.h),
                           child: Center(
-                            child: Text('No customers found',
+                            child: Text('no_customers'.tr(),
                                 style: AppText.inter(
                                     size: 13, color: AppColors.ink3)),
                           ),
@@ -124,7 +125,7 @@ class _SearchBar extends StatelessWidget {
                 decoration: InputDecoration(
                   isCollapsed: true,
                   border: InputBorder.none,
-                  hintText: 'Search customers',
+                  hintText: 'search_customers'.tr(),
                   hintStyle: AppText.inter(size: 13, color: AppColors.ink3),
                 ),
               ),
@@ -173,12 +174,12 @@ class _CustomerTile extends StatelessWidget {
           SizedBox(width: 8.w),
           draftCount > 0
               ? StatusPill(
-                  text: '$draftCount draft',
+                  text: '$draftCount ${'draft'.tr()}',
                   bg: AppColors.amberWash,
                   fg: AppColors.amberDeep,
                 )
               : const StatusPill(
-                  text: 'open',
+                  text: 'open_status'.tr(),
                   bg: AppColors.tealWash,
                   fg: AppColors.teal,
                 ),

@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -70,35 +71,44 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
     if (_isCreate) {
       final o = widget.createOrder!;
       final partner = await HiveManager().getPartner(o.partnerId);
-      _title = partner?.partnerName ?? 'New quotation';
+      _title = partner?.partnerName ?? 'new_quotation'.tr();
+      // quantities already queued for this order
+      final pre = <String, int>{};
+      for (final mv in o.colorMovements) {
+        pre[_key(mv.productId, mv.colorId)] = mv.quantity.toInt();
+      }
+      // show the FULL customer catalogue so any product/colour can be added
       final products =
           partner?.capacities.expand((c) => c.products).toList() ?? [];
-      for (final mv in o.colorMovements) {
-        ProductModel? prod;
-        for (final p in products) {
-          if (p.productTmplId == mv.productId) {
-            prod = p;
-            break;
+      for (final p in products) {
+        final pid = p.productTmplId ?? -1;
+        if (p.colors.isEmpty) {
+          final k = _key(pid, null);
+          lines.add(_QLine(
+            productId: pid,
+            productName: p.productName ?? 'Product #$pid',
+            colorId: null,
+            colorName: 'No color',
+            colorHash: null,
+            avail: (p.qtyAvailable ?? 0).toDouble(),
+            cap: (p.capacity ?? 0).toDouble(),
+          ));
+          _qty[k] = pre[k] ?? 0;
+        } else {
+          for (final c in p.colors) {
+            final k = _key(pid, c.colorId);
+            lines.add(_QLine(
+              productId: pid,
+              productName: p.productName ?? 'Product #$pid',
+              colorId: c.colorId,
+              colorName: c.colorName ?? '',
+              colorHash: c.colorHash,
+              avail: (c.qtyAvailable ?? 0).toDouble(),
+              cap: (c.capacity ?? 0).toDouble(),
+            ));
+            _qty[k] = pre[k] ?? 0;
           }
         }
-        ColorModel? color;
-        for (final c in (prod?.colors ?? <ColorModel>[])) {
-          if (c.colorId == mv.colorId) {
-            color = c;
-            break;
-          }
-        }
-        lines.add(_QLine(
-          productId: mv.productId,
-          productName: prod?.productName ?? 'Product #${mv.productId}',
-          colorId: mv.colorId,
-          colorName: color?.colorName ??
-              (mv.colorId == null ? 'No color' : 'Color #${mv.colorId}'),
-          colorHash: color?.colorHash,
-          avail: (color?.qtyAvailable ?? prod?.qtyAvailable ?? 0).toDouble(),
-          cap: (color?.capacity ?? prod?.capacity ?? 0).toDouble(),
-        ));
-        _qty[_key(mv.productId, mv.colorId)] = mv.quantity.toInt();
       }
     } else {
       final o = widget.updateOrder!;
@@ -113,27 +123,43 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
         }
         if (quotation != null) break;
       }
-      _title = quotation?.name ?? 'Edit #${o.saleOrderId}';
-      final src = quotation?.colorMovements ?? <ColorMovementModel>[];
+      _title = quotation?.name ?? '${'edit_order'.tr()} #${o.saleOrderId}';
+      final pre = <String, int>{};
       for (final mv in o.colorMovements) {
-        ColorMovementModel? m;
-        for (final s in src) {
-          if (s.productTmplId == mv.productId && s.colorId == mv.colorId) {
-            m = s;
-            break;
-          }
+        pre[_key(mv.productId, mv.colorId)] = mv.quantity.toInt();
+      }
+      // show ALL of the order's colour lines, not only the queued edits
+      final src = quotation?.colorMovements ?? <ColorMovementModel>[];
+      if (src.isNotEmpty) {
+        for (final m in src) {
+          final k = _key(m.productTmplId, m.colorId);
+          lines.add(_QLine(
+            productId: m.productTmplId ?? -1,
+            productName: m.productName ?? 'Product #${m.productTmplId}',
+            colorId: m.colorId,
+            colorName: m.colorName ??
+                (m.colorId == null ? 'No color' : 'Color #${m.colorId}'),
+            colorHash: m.colorHash,
+            avail: (m.qtyAvailable ?? 0).toDouble(),
+            cap: (m.capacity ?? 0).toDouble(),
+          ));
+          _qty[k] = pre[k] ?? (m.quantity ?? 0).toInt();
         }
-        lines.add(_QLine(
-          productId: mv.productId,
-          productName: m?.productName ?? 'Product #${mv.productId}',
-          colorId: mv.colorId,
-          colorName: m?.colorName ??
-              (mv.colorId == null ? 'No color' : 'Color #${mv.colorId}'),
-          colorHash: m?.colorHash,
-          avail: (m?.qtyAvailable ?? 0).toDouble(),
-          cap: (m?.capacity ?? 0).toDouble(),
-        ));
-        _qty[_key(mv.productId, mv.colorId)] = mv.quantity.toInt();
+      } else {
+        for (final mv in o.colorMovements) {
+          final k = _key(mv.productId, mv.colorId);
+          lines.add(_QLine(
+            productId: mv.productId,
+            productName: 'Product #${mv.productId}',
+            colorId: mv.colorId,
+            colorName:
+                mv.colorId == null ? 'No color' : 'Color #${mv.colorId}',
+            colorHash: null,
+            avail: 0.0,
+            cap: 0.0,
+          ));
+          _qty[k] = mv.quantity.toInt();
+        }
       }
     }
 
@@ -169,12 +195,12 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
       barrierColor: AppColors.ink.withOpacity(0.42),
       builder: (_) => ColorQtySheet(
         productName: g.name,
-        subtitle: 'set quantity per color',
+        subtitle: 'set_qty_per_color'.tr(),
         rows: g.lines.map((l) {
           final key = _key(l.productId, l.colorId);
           return ColorRowData(
             title: l.colorName,
-            meta: '${l.avail.toInt()} avail · cap ${l.cap.toInt()}',
+            meta: '${'avail'.tr()} ${l.avail.toInt()} · ${'cap'.tr()} ${l.cap.toInt()}',
             color: hexToColor(l.colorHash),
             available: l.avail,
             capacity: l.cap,
@@ -191,29 +217,42 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
     setState(() => _saving = true);
     if (_isCreate) {
       final o = widget.createOrder!;
-      final movements = o.colorMovements
-          .map((mv) => SaleOrderProductModel(
-                productId: mv.productId,
-                colorId: mv.colorId,
-                quantity: _qty[_key(mv.productId, mv.colorId)] ?? 0,
-              ))
-          .toList();
-      await HiveManager().replaceSaleOrder(
-          o.key, SaleOrderModel(partnerId: o.partnerId, colorMovements: movements));
+      final movements = <SaleOrderProductModel>[];
+      for (final g in _groups) {
+        for (final l in g.lines) {
+          final q = _qty[_key(l.productId, l.colorId)] ?? 0;
+          if (q > 0) {
+            movements.add(SaleOrderProductModel(
+                productId: l.productId, colorId: l.colorId, quantity: q));
+          }
+        }
+      }
+      if (movements.isEmpty) {
+        setState(() => _saving = false);
+        showDesignToast(context, 'add_one_qty'.tr(), amber: true);
+        return;
+      }
+      await HiveManager().replaceSaleOrder(o.key,
+          SaleOrderModel(partnerId: o.partnerId, colorMovements: movements));
     } else {
       final o = widget.updateOrder!;
-      final movements = o.colorMovements
-          .map((mv) => UpdateSaleOrderProductModel(
-                productId: mv.productId,
-                colorId: mv.colorId,
-                quantity: _qty[_key(mv.productId, mv.colorId)] ?? 0,
-              ))
-          .toList();
-      await HiveManager().replaceUpdateSaleOrder(o.key,
-          UpdateSaleOrderModel(saleOrderId: o.saleOrderId, colorMovements: movements));
+      final movements = <UpdateSaleOrderProductModel>[];
+      for (final g in _groups) {
+        for (final l in g.lines) {
+          movements.add(UpdateSaleOrderProductModel(
+            productId: l.productId,
+            colorId: l.colorId,
+            quantity: _qty[_key(l.productId, l.colorId)] ?? 0,
+          ));
+        }
+      }
+      await HiveManager().replaceUpdateSaleOrder(
+          o.key,
+          UpdateSaleOrderModel(
+              saleOrderId: o.saleOrderId, colorMovements: movements));
     }
     if (!mounted) return;
-    showDesignToast(context, 'Queued order updated');
+    showDesignToast(context, 'queued_order_updated'.tr());
     Navigator.pop(context, true);
   }
 
@@ -224,7 +263,7 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
       appBar: DesignAppBar(
         leading: CircleIconButton(
             icon: Icons.arrow_back, onPressed: () => Navigator.pop(context)),
-        label: _isCreate ? 'Edit queued · new' : 'Edit queued · edit',
+        label: _isCreate ? 'new_queued'.tr() : 'edit_queued'.tr(),
         title: _loaded ? _title : '…',
         trailing: UnitsTally(units: _units),
       ),
@@ -247,7 +286,7 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
               child: SafeArea(
                 top: false,
                 child: PrimaryCta(
-                  label: _saving ? 'Saving…' : 'Save to queue',
+                  label: _saving ? 'saving'.tr() : 'save_to_queue'.tr(),
                   icon: _saving ? null : Icons.check,
                   onPressed: _saving ? null : _save,
                 ),
@@ -262,7 +301,7 @@ class _OfflineQueueEditScreenState extends State<OfflineQueueEditScreen> {
         .toList();
     if (groups.isEmpty) {
       return Center(
-        child: Text('No products found',
+        child: Text('no_products_found'.tr(),
             style: AppText.inter(size: 13, color: AppColors.ink3)),
       );
     }
@@ -342,7 +381,7 @@ class _SearchBar extends StatelessWidget {
                 decoration: InputDecoration(
                   isCollapsed: true,
                   border: InputBorder.none,
-                  hintText: 'Search products',
+                  hintText: 'search_products'.tr(),
                   hintStyle: AppText.inter(size: 13, color: AppColors.ink3),
                 ),
               ),
@@ -381,7 +420,7 @@ class _SwatchStrip extends StatelessWidget {
         const Spacer(),
         Icon(Icons.touch_app_outlined, size: 15.sp, color: AppColors.ink3),
         SizedBox(width: 4.w),
-        Text('tap to edit', style: AppText.mono(size: 10, color: AppColors.ink3)),
+        Text('tap_to_edit'.tr(), style: AppText.mono(size: 10, color: AppColors.ink3)),
       ],
     );
   }
@@ -401,19 +440,15 @@ class _InlineQty extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        ColorSwatchTile(
-            color: AppColors.field,
-            available: line.avail,
-            capacity: line.cap,
-            size: 34),
-        SizedBox(width: 10.w),
         Expanded(
-          child: Text('${line.avail.toInt()} avail · cap ${line.cap.toInt()}',
-              style: AppText.mono(size: 11, color: AppColors.ink3)),
+          child: Text('${'avail'.tr()} ${line.avail.toInt()} · ${'cap'.tr()} ${line.cap.toInt()}',
+              style: AppText.mono(size: 12, color: AppColors.ink3)),
         ),
+        SizedBox(width: 10.w),
         QtyField(
           value: value,
-          textInputAction: TextInputAction.done,
+          textInputAction: TextInputAction.next,
+          onSubmitted: () => FocusScope.of(context).nextFocus(),
           onChanged: onChanged,
         ),
       ],

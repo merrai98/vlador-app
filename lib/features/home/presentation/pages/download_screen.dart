@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -63,7 +64,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
                       ),
                     ),
                     SizedBox(height: 20.h),
-                    Text('Pulling latest products & customers…',
+                    Text('pulling_data'.tr(),
                         textAlign: TextAlign.center,
                         style: AppText.inter(size: 13, color: AppColors.ink2)),
                   ] else ...[
@@ -74,7 +75,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
                         style: AppText.inter(size: 13, color: AppColors.lock)),
                     SizedBox(height: 22.h),
                     PrimaryCta(
-                      label: 'Retry',
+                      label: 'retry'.tr(),
                       icon: Icons.refresh,
                       onPressed: () =>
                           context.read<HomeBloc>().add(GetProductsEvent()),

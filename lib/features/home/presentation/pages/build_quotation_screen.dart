@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -76,13 +77,13 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
       builder: (_) => ColorQtySheet(
         productName: product.productName ?? '',
         subtitle:
-            '${(product.barcode ?? '').isNotEmpty ? '#${product.barcode} · ' : ''}set quantity per color',
+            '${(product.barcode ?? '').isNotEmpty ? '#${product.barcode} · ' : ''}${'set_qty_per_color'.tr()}',
         rows: product.colors.map((color) {
           final avail = (color.qtyAvailable ?? 0).toDouble();
           final cap = (color.capacity ?? 0).toDouble();
           return ColorRowData(
             title: color.colorName ?? '',
-            meta: '${avail.toInt()} avail · cap ${cap.toInt()}',
+            meta: '${'avail'.tr()} ${avail.toInt()} · ${'cap'.tr()} ${cap.toInt()}',
             color: hexToColor(color.colorHash),
             available: avail,
             capacity: cap,
@@ -128,7 +129,7 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
       );
       if (!mounted) return;
       showDesignToast(context,
-          'Saved offline · ${_cubit.state.totalQuantity} units queued',
+          '${'saved_offline'.tr()} · ${_cubit.state.totalQuantity} ${'queued_units'.tr()}',
           amber: true);
       NavigationService.navigateAndRemoveUntil(destination: const HomeShell());
     }
@@ -142,7 +143,7 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
         listener: (context, state) {
           if (state is CreateSaleOrderSuccessState) {
             showDesignToast(context,
-                'Quotation created · ${_cubit.state.totalQuantity} units');
+                '${'quotation_created'.tr()} · ${_cubit.state.totalQuantity} ${'units_word'.tr()}');
             NavigationService.navigateAndRemoveUntil(
                 destination: const HomeShell());
           } else if (state is CreateSaleOrderFailureState) {
@@ -166,8 +167,9 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
                 ),
               ],
             ),
-            label: 'Quotation for',
+            label: 'quotation_for'.tr(),
             title: widget.partner.partnerName ?? '',
+            titleMaxLines: 2,
             trailing: BlocBuilder<ProductQuantityCubit, ProductQuantityState>(
               builder: (context, s) => UnitsTally(units: s.totalQuantity),
             ),
@@ -184,7 +186,7 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
                         final products = _products;
                         if (products.isEmpty) {
                           return Center(
-                            child: Text('No products found',
+                            child: Text('no_products_found'.tr(),
                                 style: AppText.inter(
                                     size: 13, color: AppColors.ink3)),
                           );
@@ -269,7 +271,7 @@ class _SearchBar extends StatelessWidget {
                 decoration: InputDecoration(
                   isCollapsed: true,
                   border: InputBorder.none,
-                  hintText: 'Search products',
+                  hintText: 'search_products'.tr(),
                   hintStyle: AppText.inter(size: 13, color: AppColors.ink3),
                 ),
               ),
@@ -353,20 +355,16 @@ class _InlineQty extends StatelessWidget {
     final cap = (product.capacity ?? 0).toDouble();
     return Row(
       children: [
-        ColorSwatchTile(
-            color: AppColors.field,
-            available: avail,
-            capacity: cap,
-            size: 34),
-        SizedBox(width: 10.w),
         Expanded(
-          child: Text('${avail.toInt()} avail · cap ${cap.toInt()}',
-              style: AppText.mono(size: 11, color: AppColors.ink3)),
+          child: Text('${'avail'.tr()} ${avail.toInt()} · ${'cap'.tr()} ${cap.toInt()}',
+              style: AppText.mono(size: 12, color: AppColors.ink3)),
         ),
+        SizedBox(width: 10.w),
         QtyField(
           key: ValueKey('qty_${product.productTmplId}_nocolor'),
           value: cubit.getQuantity(product.productTmplId, null),
-          textInputAction: TextInputAction.done,
+          textInputAction: TextInputAction.next,
+          onSubmitted: () => FocusScope.of(context).nextFocus(),
           onChanged: (v) => cubit.updateQuantity(product, null, v.toString()),
         ),
       ],
@@ -401,7 +399,7 @@ class _SwatchStrip extends StatelessWidget {
         const Spacer(),
         Icon(Icons.touch_app_outlined, size: 15.sp, color: AppColors.ink3),
         SizedBox(width: 4.w),
-        Text('tap to set',
+        Text('tap_to_set'.tr(),
             style: AppText.mono(size: 10, color: AppColors.ink3)),
       ],
     );
@@ -440,10 +438,10 @@ class _DockBar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('$units unit${units == 1 ? '' : 's'}',
+                  Text('$units ${'units_word'.tr()}',
                       style: AppText.grotesk(
                           size: 15, weight: FontWeight.w700, color: fg)),
-                  Text(online ? '$lines color lines' : 'will sync when online',
+                  Text(online ? '$lines ${'color_lines'.tr()}' : 'will_sync_when_online'.tr(),
                       style: AppText.mono(size: 11, color: fg)),
                 ],
               ),
@@ -473,14 +471,14 @@ class _DockBar extends StatelessWidget {
                                         strokeWidth: 2, color: bg),
                                   ),
                                   SizedBox(width: 8.w),
-                                  Text('Saving…',
+                                  Text('saving'.tr(),
                                       style: AppText.grotesk(
                                           size: 13.5,
                                           weight: FontWeight.w600,
                                           color: bg)),
                                 ],
                               )
-                            : Text(online ? 'Save' : 'Save offline',
+                            : Text(online ? 'save'.tr() : 'save_offline'.tr(),
                                 style: AppText.grotesk(
                                     size: 13.5,
                                     weight: FontWeight.w600,

@@ -7,7 +7,7 @@ class SyncOfflineOrdersEvent extends HomeEvent {
     
     return result.fold(
       (failure) => SyncOfflineOrdersFailureState(errorMessage: failure.message),
-      (_) => SyncOfflineOrdersSuccessState(),
+      (conflicts) => SyncOfflineOrdersSuccessState(conflicts: conflicts),
     );
   }
 

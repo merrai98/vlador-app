@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -37,7 +38,7 @@ class _HomeShellState extends State<HomeShell> {
     super.initState();
     _performSync();
     _syncTimer =
-        Timer.periodic(const Duration(minutes: 3), (_) => _performSync());
+        Timer.periodic(const Duration(minutes: 30), (_) => _performSync());
   }
 
   void _performSync() {
@@ -78,21 +79,21 @@ class _HomeShellState extends State<HomeShell> {
             selectedLabelStyle:
                 AppText.inter(size: 11, weight: FontWeight.w600),
             unselectedLabelStyle: AppText.inter(size: 11),
-            items: const [
+            items: [
               BottomNavigationBarItem(
                 icon: Icon(Icons.people_outline),
                 activeIcon: Icon(Icons.people),
-                label: 'Customers',
+                label: 'customers'.tr(),
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.receipt_long_outlined),
                 activeIcon: Icon(Icons.receipt_long),
-                label: 'Quotations',
+                label: 'quotations'.tr(),
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.sync_outlined),
                 activeIcon: Icon(Icons.sync),
-                label: 'Sync',
+                label: 'sync_tab'.tr(),
               ),
             ],
           ),

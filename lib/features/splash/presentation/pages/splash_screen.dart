@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -48,7 +49,7 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             const BrandLogo(dotSize: 40, fontSize: 30),
             SizedBox(height: 12.h),
-            Text('Field order builder',
+            Text('tagline'.tr(),
                 style: AppText.inter(size: 13, color: AppColors.ink3)),
           ],
         ),

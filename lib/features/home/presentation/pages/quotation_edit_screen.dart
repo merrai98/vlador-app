@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -81,14 +82,14 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
       barrierColor: AppColors.ink.withOpacity(0.42),
       builder: (_) => ColorQtySheet(
         productName: g.name,
-        subtitle: 'set quantity per color',
+        subtitle: 'set_qty_per_color'.tr(),
         rows: g.movements.map((m) {
           final avail = (m.qtyAvailable ?? 0).toDouble();
           final cap = (m.capacity ?? 0).toDouble();
           final key = _key(m.productTmplId, m.colorId);
           return ColorRowData(
             title: m.colorName ?? 'No color',
-            meta: '${avail.toInt()} avail · cap ${cap.toInt()}',
+            meta: '${'avail'.tr()} ${avail.toInt()} · ${'cap'.tr()} ${cap.toInt()}',
             color: hexToColor(m.colorHash),
             available: avail,
             capacity: cap,
@@ -128,7 +129,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
         ),
       );
       if (!mounted) return;
-      showDesignToast(context, 'Edited offline · update queued', amber: true);
+      showDesignToast(context, 'edited_offline_queued'.tr(), amber: true);
       NavigationService.navigateAndRemoveUntil(destination: const HomeShell());
     }
   }
@@ -142,10 +143,10 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
           final code = state.response['result']?['state_code'];
           if (code == 350) {
             showDesignToast(context,
-                'Confirmed on the server — edit rejected, quantities locked',
+                'edit_rejected_locked'.tr(),
                 amber: true);
           } else {
-            showDesignToast(context, 'Quotation updated');
+            showDesignToast(context, 'quotation_updated'.tr());
           }
           NavigationService.navigateAndRemoveUntil(
               destination: const HomeShell());
@@ -159,7 +160,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
         appBar: DesignAppBar(
           leading: CircleIconButton(
               icon: Icons.arrow_back, onPressed: () => Navigator.pop(context)),
-          label: widget.readOnly ? 'Viewing' : 'Editing',
+          label: widget.readOnly ? 'viewing'.tr() : 'editing'.tr(),
           title: widget.quotation.name ?? '',
           trailing: widget.readOnly ? null : UnitsTally(units: _units),
         ),
@@ -183,8 +184,8 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
                   top: false,
                   child: PrimaryCta(
                     label: _saving
-                        ? 'Saving…'
-                        : (online ? 'Save changes' : 'Save offline'),
+                        ? 'saving'.tr()
+                        : (online ? 'save_changes'.tr() : 'save_offline'.tr()),
                     icon: _saving ? null : Icons.check,
                     amber: !online,
                     onPressed: _saving ? null : _save,
@@ -201,7 +202,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
         .where((g) => g.name.toLowerCase().contains(_search.toLowerCase()))
         .toList();
     if (groups.isEmpty) {
-      return _empty('No products found');
+      return _empty('no_products_found'.tr());
     }
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(14.w, 4.h, 14.w, 16.h),
@@ -269,7 +270,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
       final groups = _groups
           .where((g) => g.name.toLowerCase().contains(_search.toLowerCase()))
           .toList();
-      if (groups.isEmpty) return _empty('Nothing to show');
+      if (groups.isEmpty) return _empty('nothing_to_show'.tr());
       return ListView(
         padding: EdgeInsets.fromLTRB(14.w, 4.h, 14.w, 16.h),
         children: groups.map((g) {
@@ -285,7 +286,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
       );
     }
 
-    if (lines.isEmpty) return _empty('No products found');
+    if (lines.isEmpty) return _empty('no_products_found'.tr());
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(14.w, 4.h, 14.w, 16.h),
       itemCount: lines.length,
@@ -338,7 +339,7 @@ class _SearchBar extends StatelessWidget {
                 decoration: InputDecoration(
                   isCollapsed: true,
                   border: InputBorder.none,
-                  hintText: 'Search products',
+                  hintText: 'search_products'.tr(),
                   hintStyle: AppText.inter(size: 13, color: AppColors.ink3),
                 ),
               ),
@@ -377,7 +378,7 @@ class _SwatchStrip extends StatelessWidget {
         const Spacer(),
         Icon(Icons.touch_app_outlined, size: 15.sp, color: AppColors.ink3),
         SizedBox(width: 4.w),
-        Text('tap to edit',
+        Text('tap_to_edit'.tr(),
             style: AppText.mono(size: 10, color: AppColors.ink3)),
       ],
     );
@@ -400,19 +401,15 @@ class _InlineQty extends StatelessWidget {
     final cap = (movement.capacity ?? 0).toDouble();
     return Row(
       children: [
-        ColorSwatchTile(
-            color: AppColors.field,
-            available: avail,
-            capacity: cap,
-            size: 34),
-        SizedBox(width: 10.w),
         Expanded(
-          child: Text('${avail.toInt()} avail · cap ${cap.toInt()}',
-              style: AppText.mono(size: 11, color: AppColors.ink3)),
+          child: Text('${'avail'.tr()} ${avail.toInt()} · ${'cap'.tr()} ${cap.toInt()}',
+              style: AppText.mono(size: 12, color: AppColors.ink3)),
         ),
+        SizedBox(width: 10.w),
         QtyField(
           value: value,
-          textInputAction: TextInputAction.done,
+          textInputAction: TextInputAction.next,
+          onSubmitted: () => FocusScope.of(context).nextFocus(),
           onChanged: onChanged,
         ),
       ],

@@ -37,12 +37,13 @@ class HomeRepositoryImpl implements HomeRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> syncOfflineOrders() async {
+  Future<Either<Failure, int>> syncOfflineOrders() async {
+    int conflicts = 0;
     final offlineOrders = HiveManager().getAllSavedSaleOrders();
     final updateOrders = HiveManager().getAllSavedUpdateSaleOrders();
 
     if (offlineOrders.isEmpty && updateOrders.isEmpty) {
-      return const Right(unit);
+      return const Right(0);
     }
 
     // 1. Sync new orders (Add)
@@ -52,8 +53,8 @@ class HomeRepositoryImpl implements HomeRepository {
       };
 
       final result = await homeRemoteDataSource.createSaleOrder(data);
-      final Either<Failure, Unit> syncResult = await result.fold(
-        (failure) async => Left<Failure, Unit>(failure),
+      final Either<Failure, int> syncResult = await result.fold(
+        (failure) async => Left<Failure, int>(failure),
         (success) async {
           try {
             final dynamic resultValue = success["result"];
@@ -69,6 +70,7 @@ class HomeRepositoryImpl implements HomeRepository {
                         .map((q) => q["quotation_id"] as num)
                         .toList();
                     await HiveManager().removeQuotationsFromPartner(partnerId, quotationIds);
+                    conflicts += quotationIds.length;
                   }
                 }
               }
@@ -90,7 +92,7 @@ class HomeRepositoryImpl implements HomeRepository {
             }
           }
           HiveManager().clearSaleOrders();
-          return const Right<Failure, Unit>(unit);
+          return Right<Failure, int>(conflicts);
         },
       );
       if (syncResult.isLeft()) return syncResult;
@@ -103,8 +105,8 @@ class HomeRepositoryImpl implements HomeRepository {
       };
       
       final result = await homeRemoteDataSource.updateSaleOrder(data);
-      final Either<Failure, Unit> syncResult = await result.fold(
-        (failure) async => Left<Failure, Unit>(failure),
+      final Either<Failure, int> syncResult = await result.fold(
+        (failure) async => Left<Failure, int>(failure),
         (success) async {
           try {
             final dynamic resultValue = success["result"];
@@ -120,6 +122,7 @@ class HomeRepositoryImpl implements HomeRepository {
                         .map((q) => q["quotation_id"] as num)
                         .toList();
                     await HiveManager().removeQuotationsFromPartner(partnerId, quotationIds);
+                    conflicts += quotationIds.length;
                   }
                 }
               }
@@ -141,13 +144,13 @@ class HomeRepositoryImpl implements HomeRepository {
             }
           }
           HiveManager().clearUpdateSaleOrders();
-          return const Right<Failure, Unit>(unit);
+          return Right<Failure, int>(conflicts);
         },
       );
       if (syncResult.isLeft()) return syncResult;
     }
 
-    return const Right(unit);
+    return Right(conflicts);
   }
 
   @override

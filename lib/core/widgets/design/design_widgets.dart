@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -182,16 +183,18 @@ class DesignAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String label;
   final String title;
   final Widget? trailing;
+  final int titleMaxLines;
   const DesignAppBar({
     super.key,
     required this.leading,
     required this.label,
     required this.title,
     this.trailing,
+    this.titleMaxLines = 1,
   });
 
   @override
-  Size get preferredSize => Size.fromHeight(58.h);
+  Size get preferredSize => Size.fromHeight((titleMaxLines > 1 ? 74 : 58).h);
 
   @override
   Widget build(BuildContext context) {
@@ -220,10 +223,10 @@ class DesignAppBar extends StatelessWidget implements PreferredSizeWidget {
                             color: AppColors.ink3,
                             letterSpacing: 0.7)),
                     Text(title,
-                        maxLines: 1,
+                        maxLines: titleMaxLines,
                         overflow: TextOverflow.ellipsis,
                         style: AppText.grotesk(
-                            size: 15, weight: FontWeight.w600)),
+                            size: 15, weight: FontWeight.w600, height: 1.2)),
                   ],
                 ),
               ),
@@ -278,7 +281,7 @@ class UnitsTally extends StatelessWidget {
         Text('$units',
             style: AppText.grotesk(
                 size: 18, weight: FontWeight.w700, color: AppColors.teal)),
-        Text('UNITS',
+        Text('units'.tr(),
             style: AppText.inter(
                 size: 9, color: AppColors.ink3, letterSpacing: 0.5)),
       ],
@@ -351,44 +354,30 @@ class StatusPill extends StatelessWidget {
   }
 }
 
-/// The `.cs` colour swatch with an availability meter at the bottom.
+/// A clean rounded colour square. (`available`/`capacity` are accepted for
+/// call-site compatibility but no longer drawn as a meter.)
 class ColorSwatchTile extends StatelessWidget {
   final Color color;
+  final double size;
   final double available;
   final double capacity;
-  final double size;
   const ColorSwatchTile({
     super.key,
     required this.color,
-    required this.available,
-    required this.capacity,
     this.size = 40,
+    this.available = 0,
+    this.capacity = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final double fill =
-        capacity <= 0 ? 0 : (available / capacity).clamp(0.0, 1.0);
     return Container(
       width: size.w,
       height: size.w,
-      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(11.r),
         border: Border.all(color: AppColors.line),
-      ),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-          height: 4.h,
-          color: Colors.white.withOpacity(0.5),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: fill,
-            child: Container(color: AppColors.amber),
-          ),
-        ),
       ),
     );
   }
@@ -514,6 +503,7 @@ class DesignCard extends StatelessWidget {
           : InkWell(
               borderRadius: BorderRadius.circular(radius.r),
               onTap: onTap,
+              canRequestFocus: false,
               child: card,
             ),
     );
@@ -658,6 +648,7 @@ class _QtyFieldState extends State<QtyField> {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
+            canRequestFocus: false,
             child: Center(
               child: Text(g,
                   style: AppText.inter(
@@ -863,7 +854,7 @@ class _ColorQtySheetState extends State<ColorQtySheet> {
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(16.w, 11.h, 16.w, 12.h),
                   child: PrimaryCta(
-                    label: 'Done',
+                    label: 'done'.tr(),
                     icon: Icons.check,
                     onPressed: () => Navigator.pop(context),
                   ),

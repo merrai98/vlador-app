@@ -7,7 +7,7 @@ class SyncOfflineOrdersUseCase {
 
   SyncOfflineOrdersUseCase({required this.repository});
 
-  Future<Either<Failure, Unit>> call() async {
+  Future<Either<Failure, int>> call() async {
     return await repository.syncOfflineOrders();
   }
 }

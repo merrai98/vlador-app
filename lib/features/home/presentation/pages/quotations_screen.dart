@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -5,7 +6,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/helpers/hive_manager.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
-import '../../../../core/utils/helper_function.dart';
 import '../../../../core/widgets/design/design_widgets.dart';
 import '../../data/models/models.dart';
 import '../bloc/home_bloc.dart';
@@ -39,8 +39,8 @@ class _QuotationsScreenState extends State<QuotationsScreen> {
         backgroundColor: AppColors.bg,
         appBar: DesignAppBar(
           leading: const MarkerSquare(text: 'Q', color: AppColors.teal),
-          label: 'Quotations',
-          title: 'All customers',
+          label: 'quotations'.tr(),
+          title: 'all_customers'.tr(),
           trailing: CircleIconButton(
             icon: _searching ? Icons.close : Icons.search,
             onPressed: () => setState(() {
@@ -73,7 +73,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> {
                         decoration: InputDecoration(
                           isCollapsed: true,
                           border: InputBorder.none,
-                          hintText: 'Search quotations',
+                          hintText: 'search_quotations'.tr(),
                           hintStyle:
                               AppText.inter(size: 13, color: AppColors.ink3),
                         ),
@@ -106,7 +106,7 @@ class _QuotationsScreenState extends State<QuotationsScreen> {
                       final queued = HiveManager().getAllSavedSaleOrders();
                       if (all.isEmpty && queued.isEmpty) {
                         return Center(
-                          child: Text('No quotations yet',
+                          child: Text('no_quotations_yet'.tr(),
                               style: AppText.inter(
                                   size: 13, color: AppColors.ink3)),
                         );
@@ -138,8 +138,6 @@ class _QuotationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locked = quotation.state == 'sale';
-    final lines =
-        quotation.colorMovements.where((m) => (m.quantity ?? 0) > 0).toList();
 
     return DesignCard(
       margin: EdgeInsets.only(bottom: 11.h),
@@ -149,40 +147,21 @@ class _QuotationCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              _stateBadge(locked),
+              const Spacer(),
               Text(quotation.name ?? '',
                   style: AppText.mono(
                       size: 14, weight: FontWeight.w700, color: AppColors.ink)),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: Text(quotation.partnerName ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.inter(size: 12, color: AppColors.ink3)),
-              ),
-              _stateBadge(locked),
             ],
           ),
+          SizedBox(height: 8.h),
+          Text(quotation.partnerName ?? '',
+              style: AppText.inter(
+                  size: 14.5, weight: FontWeight.w600, height: 1.25)),
           SizedBox(height: 10.h),
           Row(children: [
-            _meta('Units', '${(quotation.totalCount ?? 0).toInt()}'),
-            SizedBox(width: 14.w),
-            _meta('Colors', '${lines.length}'),
+            _meta('units'.tr(), '${(quotation.totalCount ?? 0).toInt()}'),
           ]),
-          if (lines.isNotEmpty) ...[
-            SizedBox(height: 11.h),
-            Wrap(
-              spacing: 5.w,
-              runSpacing: 5.h,
-              children: lines
-                  .take(6)
-                  .map((m) => _colorChip(
-                        hexToColor(m.colorHash),
-                        m.colorName ?? '',
-                        (m.quantity ?? 0).toInt(),
-                      ))
-                  .toList(),
-            ),
-          ],
           SizedBox(height: 11.h),
           if (locked) ...[
             _lockMessage(),
@@ -190,7 +169,7 @@ class _QuotationCard extends StatelessWidget {
             Row(children: [
               Expanded(
                 child: _GhostButton(
-                  label: 'Locked',
+                  label: 'locked'.tr(),
                   bg: AppColors.lockWash,
                   fg: AppColors.lock,
                   icon: Icons.lock_outline,
@@ -199,7 +178,7 @@ class _QuotationCard extends StatelessWidget {
               SizedBox(width: 8.w),
               Expanded(
                 child: _GhostButton(
-                  label: 'Duplicate',
+                  label: 'duplicate'.tr(),
                   bg: AppColors.field,
                   fg: AppColors.ink2,
                   onTap: () => _duplicate(context),
@@ -210,7 +189,7 @@ class _QuotationCard extends StatelessWidget {
             Row(children: [
               Expanded(
                 child: _GhostButton(
-                  label: 'Edit quantities',
+                  label: 'edit_quantities'.tr(),
                   bg: AppColors.teal,
                   fg: Colors.white,
                   onTap: () => Navigator.push(
@@ -224,7 +203,7 @@ class _QuotationCard extends StatelessWidget {
               SizedBox(width: 8.w),
               Expanded(
                 child: _GhostButton(
-                  label: 'View',
+                  label: 'view'.tr(),
                   bg: AppColors.field,
                   fg: AppColors.ink2,
                   onTap: () => Navigator.push(
@@ -244,7 +223,7 @@ class _QuotationCard extends StatelessWidget {
   Future<void> _duplicate(BuildContext context) async {
     final partner = await HiveManager().getPartner(quotation.partnerId ?? 0);
     if (partner == null) {
-      showDesignToast(context, 'Customer catalog not cached', amber: true);
+      showDesignToast(context, 'catalog_not_cached'.tr(), amber: true);
       return;
     }
     // Map this quotation's colour movements onto the partner's catalogue.
@@ -282,10 +261,10 @@ class _QuotationCard extends StatelessWidget {
   Widget _stateBadge(bool locked) {
     if (locked) {
       return const StatusPill(
-          text: 'CONFIRMED', bg: AppColors.lockWash, fg: AppColors.lock);
+          text: 'confirmed_badge'.tr(), bg: AppColors.lockWash, fg: AppColors.lock);
     }
     return const StatusPill(
-        text: 'DRAFT', bg: AppColors.tealWash, fg: AppColors.tealDark);
+        text: 'draft_badge'.tr(), bg: AppColors.tealWash, fg: AppColors.tealDark);
   }
 
   Widget _meta(String label, String value) {
@@ -295,27 +274,6 @@ class _QuotationCard extends StatelessWidget {
           style: AppText.mono(
               size: 11.5, weight: FontWeight.w700, color: AppColors.ink)),
     ]);
-  }
-
-  Widget _colorChip(Color c, String code, int qty) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(4.w, 2.h, 8.w, 2.h),
-      decoration: BoxDecoration(
-        color: AppColors.field,
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-            width: 13.w,
-            height: 13.w,
-            decoration: BoxDecoration(
-                color: c,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.ink.withOpacity(0.12)))),
-        SizedBox(width: 5.w),
-        Text('$code ×$qty', style: AppText.mono(size: 11, color: AppColors.ink)),
-      ]),
-    );
   }
 
   Widget _lockMessage() {
@@ -329,7 +287,7 @@ class _QuotationCard extends StatelessWidget {
         Icon(Icons.lock_outline, size: 13.sp, color: AppColors.lock),
         SizedBox(width: 7.w),
         Expanded(
-          child: Text('Confirmed on the server — quantities are locked.',
+          child: Text('locked_message'.tr(),
               style: AppText.inter(
                   size: 11.5, color: AppColors.lock, height: 1.35)),
         ),
@@ -353,16 +311,16 @@ class _QueuedCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Text('(offline)',
+            Text('offline_paren'.tr(),
                 style: AppText.mono(
                     size: 14, weight: FontWeight.w700, color: AppColors.ink)),
             const Spacer(),
             const StatusPill(
-                text: 'QUEUED', bg: AppColors.amberWash, fg: AppColors.amberDeep),
+                text: 'queued_badge'.tr(), bg: AppColors.amberWash, fg: AppColors.amberDeep),
           ]),
           SizedBox(height: 10.h),
           Row(children: [
-            Text('Units ',
+            Text('${'units'.tr()} ',
                 style: AppText.mono(size: 11.5, color: AppColors.ink2)),
             Text('$units',
                 style: AppText.mono(
@@ -370,11 +328,11 @@ class _QueuedCard extends StatelessWidget {
                     weight: FontWeight.w700,
                     color: AppColors.ink)),
             SizedBox(width: 14.w),
-            Text('${order.colorMovements.length} color lines',
+            Text('${order.colorMovements.length} ${'color_lines'.tr()}',
                 style: AppText.mono(size: 11.5, color: AppColors.ink3)),
           ]),
           SizedBox(height: 8.h),
-          Text('Waiting to sync — open the Sync tab to push.',
+          Text('waiting_to_sync_hint'.tr(),
               style: AppText.inter(size: 11.5, color: AppColors.amberDeep)),
         ],
       ),
