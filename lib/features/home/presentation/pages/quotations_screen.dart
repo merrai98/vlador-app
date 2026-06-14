@@ -260,10 +260,10 @@ class _QuotationCard extends StatelessWidget {
 
   Widget _stateBadge(bool locked) {
     if (locked) {
-      return const StatusPill(
+      return StatusPill(
           text: 'confirmed_badge'.tr(), bg: AppColors.lockWash, fg: AppColors.lock);
     }
-    return const StatusPill(
+    return StatusPill(
         text: 'draft_badge'.tr(), bg: AppColors.tealWash, fg: AppColors.tealDark);
   }
 
@@ -315,7 +315,7 @@ class _QueuedCard extends StatelessWidget {
                 style: AppText.mono(
                     size: 14, weight: FontWeight.w700, color: AppColors.ink)),
             const Spacer(),
-            const StatusPill(
+            StatusPill(
                 text: 'queued_badge'.tr(), bg: AppColors.amberWash, fg: AppColors.amberDeep),
           ]),
           SizedBox(height: 10.h),

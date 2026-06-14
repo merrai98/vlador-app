@@ -178,7 +178,7 @@ class _CustomerTile extends StatelessWidget {
                   bg: AppColors.amberWash,
                   fg: AppColors.amberDeep,
                 )
-              : const StatusPill(
+              : StatusPill(
                   text: 'open_status'.tr(),
                   bg: AppColors.tealWash,
                   fg: AppColors.teal,
