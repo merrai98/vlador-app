@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../core/constants/preferences_keys.dart';
 import '../../../../core/helpers/hive_manager.dart';
 import '../../../../core/helpers/navigator.dart';
 import '../../../../core/network/network_info.dart';
@@ -10,6 +11,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/helper_function.dart';
 import '../../../../core/utils/network_cubit/network_cubit.dart';
+import '../../../../core/utils/shared_preferences_manger.dart';
 import '../../../../core/widgets/design/design_widgets.dart';
 import '../../../../injection_container.dart';
 import '../../data/models/models.dart';
@@ -151,6 +153,7 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
           if (state is CreateSaleOrderSuccessState) {
             showDesignToast(context,
                 '${'quotation_created'.tr()} · ${_cubit.state.totalQuantity} ${'units_word'.tr()}');
+            _refreshProducts(context);
             final q = _quotationFromResponse(state.response);
             if (q != null) {
               Navigator.of(context).pushReplacement(MaterialPageRoute(
@@ -289,6 +292,13 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
       }
     } catch (_) {}
     return null;
+  }
+
+  void _refreshProducts(BuildContext context) {
+    final lastSync = sl<SharedPreferencesService>()
+            .getData<String>(PreferencesKeys.lastSync) ??
+        "";
+    context.read<HomeBloc>().add(GetProductsEvent(lastSync: lastSync));
   }
 }
 
