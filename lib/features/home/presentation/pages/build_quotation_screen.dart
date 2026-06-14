@@ -16,14 +16,11 @@ import '../bloc/home_bloc.dart';
 import '../bloc/product_quantity_cubit.dart';
 import 'home_shell.dart';
 
-/// Scenario 3 — Build a quotation with the **Browse → open** workflow:
-/// product cards with a colour swatch strip; tapping a product opens a bottom
-/// sheet with one stepper per colour. Quantities accumulate in a docked bar
-/// which saves through POST /api/create_sale_order (or queues offline).
+/// Scenario 3 — Build a quotation (Browse → open). Products with colours open a
+/// colour sheet (keyboard-editable steppers, "next" jumps to the row below);
+/// colourless products take a quantity inline on the card with no popup.
 class BuildQuotationScreen extends StatefulWidget {
   final PartnerModel partner;
-
-  /// Optional pre-fill (used by "Duplicate" on a confirmed quotation).
   final List<SelectedProduct>? prefill;
 
   const BuildQuotationScreen({
@@ -39,6 +36,7 @@ class BuildQuotationScreen extends StatefulWidget {
 class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
   final ProductQuantityCubit _cubit = ProductQuantityCubit();
   String _search = '';
+  bool _saving = false;
 
   @override
   void initState() {
@@ -61,10 +59,11 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
     for (final cap in widget.partner.capacities) {
       list.addAll(cap.products);
     }
+    final q = _search.toLowerCase();
     return list
         .where((p) =>
-            (p.productName ?? '').toLowerCase().contains(_search.toLowerCase()) ||
-            (p.barcode ?? '').toLowerCase().contains(_search.toLowerCase()))
+            (p.productName ?? '').toLowerCase().contains(q) ||
+            (p.barcode ?? '').toLowerCase().contains(q))
         .toList();
   }
 
@@ -74,16 +73,33 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: AppColors.ink.withOpacity(0.42),
-      builder: (_) => BlocProvider.value(
-        value: _cubit,
-        child: _ColorSheet(product: product),
+      builder: (_) => ColorQtySheet(
+        productName: product.productName ?? '',
+        subtitle:
+            '${(product.barcode ?? '').isNotEmpty ? '#${product.barcode} · ' : ''}set quantity per color',
+        rows: product.colors.map((color) {
+          final avail = (color.qtyAvailable ?? 0).toDouble();
+          final cap = (color.capacity ?? 0).toDouble();
+          return ColorRowData(
+            title: color.colorName ?? '',
+            meta: '${avail.toInt()} avail · cap ${cap.toInt()}',
+            color: hexToColor(color.colorHash),
+            available: avail,
+            capacity: cap,
+            initialQty: _cubit.getQuantity(product.productTmplId, color.colorId),
+            onChanged: (v) =>
+                _cubit.updateQuantity(product, color, v.toString()),
+          );
+        }).toList(),
       ),
     );
   }
 
   Future<void> _save() async {
+    if (_saving) return;
     final selected = _cubit.state.selectedProducts.values.toList();
     if (selected.isEmpty) return;
+    setState(() => _saving = true);
 
     final movements = selected
         .map((e) => SaleOrderProductModel(
@@ -111,8 +127,8 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
         ),
       );
       if (!mounted) return;
-      showDesignToast(
-          context, 'Saved offline · ${_cubit.state.totalQuantity} units queued',
+      showDesignToast(context,
+          'Saved offline · ${_cubit.state.totalQuantity} units queued',
           amber: true);
       NavigationService.navigateAndRemoveUntil(destination: const HomeShell());
     }
@@ -130,6 +146,7 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
             NavigationService.navigateAndRemoveUntil(
                 destination: const HomeShell());
           } else if (state is CreateSaleOrderFailureState) {
+            if (mounted) setState(() => _saving = false);
             showDesignToast(context, state.errorMessage, amber: true);
           }
         },
@@ -178,9 +195,10 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
                           itemBuilder: (context, i) {
                             final p = products[i];
                             return _ProductCard(
+                              key: ValueKey('p_${p.productTmplId}'),
                               product: p,
                               total: _totalFor(s, p),
-                              onTap: () => _openSheet(p),
+                              onTap: p.colors.isEmpty ? null : () => _openSheet(p),
                             );
                           },
                         );
@@ -192,7 +210,7 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
               Positioned(
                 left: 12.w,
                 right: 12.w,
-                bottom: 12.h,
+                bottom: 12.h + MediaQuery.of(context).viewPadding.bottom,
                 child: BlocBuilder<ProductQuantityCubit, ProductQuantityState>(
                   builder: (context, s) {
                     final lines = s.selectedProducts.length;
@@ -202,6 +220,7 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
                       units: s.totalQuantity,
                       lines: lines,
                       online: online,
+                      saving: _saving,
                       onSave: _save,
                     );
                   },
@@ -265,16 +284,17 @@ class _SearchBar extends StatelessWidget {
 class _ProductCard extends StatelessWidget {
   final ProductModel product;
   final int total;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   const _ProductCard({
+    super.key,
     required this.product,
     required this.total,
-    required this.onTap,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colors = product.colors;
+    final hasColors = product.colors.isNotEmpty;
     return DesignCard(
       margin: EdgeInsets.only(bottom: 10.h),
       onTap: onTap,
@@ -282,22 +302,21 @@ class _ProductCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(product.productName ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            AppText.inter(size: 14.5, weight: FontWeight.w600)),
-                    SizedBox(height: 2.h),
+                        style: AppText.inter(
+                            size: 14.5, weight: FontWeight.w600, height: 1.25)),
+                    SizedBox(height: 3.h),
                     Text(
                       [
                         if ((product.barcode ?? '').isNotEmpty)
                           '#${product.barcode}',
-                        if (colors.isNotEmpty) '${colors.length} colours',
+                        if (hasColors) '${product.colors.length} colours',
                       ].join(' · '),
                       style: AppText.mono(size: 11, color: AppColors.ink3),
                     ),
@@ -313,9 +332,44 @@ class _ProductCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: 10.h),
-          _SwatchStrip(colors: colors),
+          if (hasColors)
+            _SwatchStrip(colors: product.colors)
+          else
+            _InlineQty(product: product),
         ],
       ),
+    );
+  }
+}
+
+class _InlineQty extends StatelessWidget {
+  final ProductModel product;
+  const _InlineQty({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<ProductQuantityCubit>();
+    final avail = (product.qtyAvailable ?? 0).toDouble();
+    final cap = (product.capacity ?? 0).toDouble();
+    return Row(
+      children: [
+        ColorSwatchTile(
+            color: AppColors.field,
+            available: avail,
+            capacity: cap,
+            size: 34),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: Text('${avail.toInt()} avail · cap ${cap.toInt()}',
+              style: AppText.mono(size: 11, color: AppColors.ink3)),
+        ),
+        QtyField(
+          key: ValueKey('qty_${product.productTmplId}_nocolor'),
+          value: cubit.getQuantity(product.productTmplId, null),
+          textInputAction: TextInputAction.done,
+          onChanged: (v) => cubit.updateQuantity(product, null, v.toString()),
+        ),
+      ],
     );
   }
 }
@@ -326,19 +380,6 @@ class _SwatchStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (colors.isEmpty) {
-      return Container(
-        width: 28.w,
-        height: 28.w,
-        decoration: BoxDecoration(
-          color: AppColors.field,
-          borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(color: AppColors.line),
-        ),
-        alignment: Alignment.center,
-        child: Text('—', style: AppText.mono(size: 11, color: AppColors.ink3)),
-      );
-    }
     final shown = colors.take(5).toList();
     final extra = colors.length - shown.length;
     return Row(
@@ -357,6 +398,11 @@ class _SwatchStrip extends StatelessWidget {
             )),
         if (extra > 0)
           Text('+$extra', style: AppText.mono(size: 11, color: AppColors.ink3)),
+        const Spacer(),
+        Icon(Icons.touch_app_outlined, size: 15.sp, color: AppColors.ink3),
+        SizedBox(width: 4.w),
+        Text('tap to set',
+            style: AppText.mono(size: 10, color: AppColors.ink3)),
       ],
     );
   }
@@ -366,11 +412,13 @@ class _DockBar extends StatelessWidget {
   final int units;
   final int lines;
   final bool online;
+  final bool saving;
   final VoidCallback onSave;
   const _DockBar({
     required this.units,
     required this.lines,
     required this.online,
+    required this.saving,
     required this.onSave,
   });
 
@@ -395,32 +443,49 @@ class _DockBar extends StatelessWidget {
                   Text('$units unit${units == 1 ? '' : 's'}',
                       style: AppText.grotesk(
                           size: 15, weight: FontWeight.w700, color: fg)),
-                  Text(
-                    online
-                        ? '$lines color lines'
-                        : 'will sync when online',
-                    style: AppText.mono(size: 11, color: fg),
-                  ),
+                  Text(online ? '$lines color lines' : 'will sync when online',
+                      style: AppText.mono(size: 11, color: fg)),
                 ],
               ),
             ),
             SizedBox(width: 10.w),
-            SizedBox(
-              height: 42.h,
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(11.r),
-                child: InkWell(
+            Opacity(
+              opacity: saving ? 0.7 : 1,
+              child: SizedBox(
+                height: 42.h,
+                child: Material(
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(11.r),
-                  onTap: onSave,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Center(
-                      child: Text(online ? 'Save' : 'Save offline',
-                          style: AppText.grotesk(
-                              size: 13.5,
-                              weight: FontWeight.w600,
-                              color: bg)),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(11.r),
+                    onTap: saving ? null : onSave,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: Center(
+                        child: saving
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 15.w,
+                                    height: 15.w,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: bg),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text('Saving…',
+                                      style: AppText.grotesk(
+                                          size: 13.5,
+                                          weight: FontWeight.w600,
+                                          color: bg)),
+                                ],
+                              )
+                            : Text(online ? 'Save' : 'Save offline',
+                                style: AppText.grotesk(
+                                    size: 13.5,
+                                    weight: FontWeight.w600,
+                                    color: bg)),
+                      ),
                     ),
                   ),
                 ),
@@ -428,128 +493,6 @@ class _DockBar extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Bottom sheet: one stepper per colour (or a single row for colourless
-/// products). Mirrors the `.sheet` in the design.
-class _ColorSheet extends StatelessWidget {
-  final ProductModel product;
-  const _ColorSheet({required this.product});
-
-  @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<ProductQuantityCubit>();
-    final rows = product.colors.isEmpty
-        ? <ColorModel?>[null]
-        : product.colors.cast<ColorModel?>();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      constraints: BoxConstraints(maxHeight: 0.8.sh),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(height: 10.h),
-          Container(
-            width: 36.w,
-            height: 4.h,
-            decoration: BoxDecoration(
-              color: AppColors.bench2,
-              borderRadius: BorderRadius.circular(4.r),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(18.w, 8.h, 18.w, 9.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(product.productName ?? '',
-                    style: AppText.grotesk(size: 16, weight: FontWeight.w600)),
-                SizedBox(height: 2.h),
-                Text(
-                  '${(product.barcode ?? '').isNotEmpty ? '#${product.barcode} · ' : ''}set quantity per color',
-                  style: AppText.mono(size: 11.5, color: AppColors.ink3),
-                ),
-              ],
-            ),
-          ),
-          Flexible(
-            child: BlocBuilder<ProductQuantityCubit, ProductQuantityState>(
-              builder: (context, _) {
-                return ListView.separated(
-                  shrinkWrap: true,
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  itemCount: rows.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1, color: AppColors.line2),
-                  itemBuilder: (context, i) {
-                    final color = rows[i];
-                    final avail =
-                        (color?.qtyAvailable ?? product.qtyAvailable ?? 0)
-                            .toDouble();
-                    final cap =
-                        (color?.capacity ?? product.capacity ?? 0).toDouble();
-                    final qty = cubit.getQuantity(
-                        product.productTmplId, color?.colorId);
-                    return Padding(
-                      padding: EdgeInsets.symmetric(vertical: 9.h),
-                      child: Row(
-                        children: [
-                          ColorSwatchTile(
-                            color: color != null
-                                ? hexToColor(color.colorHash)
-                                : AppColors.field,
-                            available: avail,
-                            capacity: cap,
-                          ),
-                          SizedBox(width: 11.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(color?.colorName ?? 'No color',
-                                    style: AppText.mono(
-                                        size: 13,
-                                        weight: FontWeight.w700,
-                                        color: AppColors.ink)),
-                                Text(
-                                    '${avail.toInt()} avail · cap ${cap.toInt()}',
-                                    style: AppText.mono(
-                                        size: 10.5, color: AppColors.ink3)),
-                              ],
-                            ),
-                          ),
-                          QtyStepper(
-                            value: qty,
-                            onChanged: (v) => cubit.updateQuantity(
-                                product, color, v.toString()),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.fromLTRB(16.w, 11.h, 16.w, 16.h),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.line2)),
-            ),
-            child: PrimaryCta(
-              label: 'Done',
-              icon: Icons.check,
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ],
       ),
     );
   }

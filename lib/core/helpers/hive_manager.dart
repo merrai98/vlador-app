@@ -160,6 +160,15 @@ class HiveManager {
     await _saleOrderBox.add(saleOrder);
   }
 
+  /// Replace a queued (offline) create order in place, preserving its slot.
+  Future<void> replaceSaleOrder(dynamic key, SaleOrderModel order) async {
+    if (key != null) {
+      await _saleOrderBox.put(key, order);
+    } else {
+      await _saleOrderBox.add(order);
+    }
+  }
+
   List<SaleOrderModel> getAllSavedSaleOrders() {
     return _saleOrderBox.values.toList();
   }
@@ -176,6 +185,16 @@ class HiveManager {
 
   Future<void> saveUpdateSaleOrder(UpdateSaleOrderModel updateSaleOrder) async {
     await _updateSaleOrderBox.add(updateSaleOrder);
+  }
+
+  /// Replace a queued (offline) edit order in place, preserving its slot.
+  Future<void> replaceUpdateSaleOrder(
+      dynamic key, UpdateSaleOrderModel order) async {
+    if (key != null) {
+      await _updateSaleOrderBox.put(key, order);
+    } else {
+      await _updateSaleOrderBox.add(order);
+    }
   }
 
   List<UpdateSaleOrderModel> getAllSavedUpdateSaleOrders() {

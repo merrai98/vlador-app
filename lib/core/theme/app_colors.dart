@@ -96,15 +96,15 @@ class AppColors {
   static const Color line = Color(0xFFE2E5EA);
   static const Color line2 = Color(0xFFEBEDF1);
 
-  static const Color teal = Color(0xFF0B5E63);
-  static const Color tealDark = Color(0xFF084146);
-  static const Color tealWash = Color(0xFFE1EFEF);
-  static const Color tealTint = Color(0xFFF0F7F7);
+  static const Color teal = Color(0xFF3C3060); // logo purple (primary)
+  static const Color tealDark = Color(0xFF2A2147);
+  static const Color tealWash = Color(0xFFECEAF3);
+  static const Color tealTint = Color(0xFFF5F3F9);
 
   static const Color good = Color(0xFF1F7A4D);
   static const Color goodWash = Color(0xFFE4F2EA);
-  static const Color amber = Color(0xFFB3791C);
-  static const Color amberWash = Color(0xFFF6ECD8);
+  static const Color amber = Color(0xFFF0B424); // logo gold (accent/offline)
+  static const Color amberWash = Color(0xFFFBF1D6);
   static const Color amberInk = Color(0xFF1C1305);
   static const Color amberDeep = Color(0xFF8A5A07);
   static const Color lock = Color(0xFF9A3B3B);

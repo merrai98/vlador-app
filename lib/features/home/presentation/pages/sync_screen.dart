@@ -14,13 +14,21 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../splash/presentation/pages/splash_screen.dart';
 import '../../data/models/models.dart';
 import '../bloc/home_bloc.dart';
+import 'offline_queue_edit_screen.dart';
 
 class _QueueItem {
   final String title;
   final String detail;
   final bool isCreate;
-  _QueueItem(
-      {required this.title, required this.detail, required this.isCreate});
+  final SaleOrderModel? createOrder;
+  final UpdateSaleOrderModel? updateOrder;
+  _QueueItem({
+    required this.title,
+    required this.detail,
+    required this.isCreate,
+    this.createOrder,
+    this.updateOrder,
+  });
 }
 
 class SyncScreen extends StatefulWidget {
@@ -50,6 +58,7 @@ class _SyncScreenState extends State<SyncScreen> {
         title: 'New quotation',
         detail: '${names[o.partnerId] ?? 'Partner #${o.partnerId}'} · $units units',
         isCreate: true,
+        createOrder: o,
       ));
     }
     for (final UpdateSaleOrderModel o in updates) {
@@ -59,6 +68,7 @@ class _SyncScreenState extends State<SyncScreen> {
         title: 'Edit order #${o.saleOrderId}',
         detail: '$units units',
         isCreate: false,
+        updateOrder: o,
       ));
     }
     return items;
@@ -77,6 +87,19 @@ class _SyncScreenState extends State<SyncScreen> {
 
   void _logout() {
     context.read<AuthBloc>().add(LogoutEvent());
+  }
+
+  Future<void> _editItem(_QueueItem item) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OfflineQueueEditScreen(
+          createOrder: item.createOrder,
+          updateOrder: item.updateOrder,
+        ),
+      ),
+    );
+    if (changed == true && mounted) setState(() {});
   }
 
   @override
@@ -125,12 +148,27 @@ class _SyncScreenState extends State<SyncScreen> {
                   trailing: Text(online ? 'ONLINE' : 'OFFLINE',
                       style: AppText.mono(
                           size: 11,
-                          color: online ? AppColors.good : AppColors.amber)),
+                          color: online ? AppColors.good : AppColors.amberDeep)),
                 ),
                 Expanded(
                   child: ListView(
                     padding: EdgeInsets.all(14.w),
                     children: [
+                      if (items.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: 12.h),
+                          child: PrimaryCta(
+                            label: !online
+                                ? 'Connect to sync'
+                                : _syncing
+                                    ? 'Syncing…'
+                                    : 'Sync now',
+                            icon: Icons.refresh,
+                            amber: !online,
+                            onPressed:
+                                (!online || _syncing) ? null : _runSync,
+                          ),
+                        ),
                       if (items.isEmpty && !_done)
                         Padding(
                           padding: EdgeInsets.symmetric(vertical: 24.h),
@@ -140,22 +178,13 @@ class _SyncScreenState extends State<SyncScreen> {
                                     size: 13, color: AppColors.ink3)),
                           ),
                         ),
-                      ...items.map((it) => _QueueRow(item: it, syncing: _syncing)),
-                      SizedBox(height: 6.h),
-                      if (items.isNotEmpty)
-                        PrimaryCta(
-                          label: !online
-                              ? 'Connect to sync'
-                              : _syncing
-                                  ? 'Syncing…'
-                                  : 'Sync now',
-                          icon: Icons.refresh,
-                          amber: !online,
-                          onPressed:
-                              (!online || _syncing) ? null : _runSync,
-                        ),
+                      ...items.map((it) => _QueueRow(
+                            item: it,
+                            syncing: _syncing,
+                            onTap: _syncing ? null : () => _editItem(it),
+                          )),
                       if (_done) ...[
-                        SizedBox(height: 14.h),
+                        SizedBox(height: 8.h),
                         _Summary(created: _created, updated: _updated),
                       ],
                       SizedBox(height: 16.h),
@@ -177,13 +206,15 @@ class _SyncScreenState extends State<SyncScreen> {
 class _QueueRow extends StatelessWidget {
   final _QueueItem item;
   final bool syncing;
-  const _QueueRow({required this.item, required this.syncing});
+  final VoidCallback? onTap;
+  const _QueueRow({required this.item, required this.syncing, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return DesignCard(
       margin: EdgeInsets.only(bottom: 9.h),
       radius: 13,
+      onTap: onTap,
       child: Row(
         children: [
           Container(
@@ -216,14 +247,19 @@ class _QueueRow extends StatelessWidget {
               ],
             ),
           ),
-          syncing
-              ? SizedBox(
-                  width: 14.w,
-                  height: 14.w,
-                  child: const CircularProgressIndicator(
-                      strokeWidth: 2, color: AppColors.teal))
-              : Text('queued',
-                  style: AppText.mono(size: 11, color: AppColors.ink3)),
+          if (syncing)
+            SizedBox(
+              width: 14.w,
+              height: 14.w,
+              child: const CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.teal),
+            )
+          else ...[
+            Text('queued',
+                style: AppText.mono(size: 11, color: AppColors.ink3)),
+            SizedBox(width: 8.w),
+            Icon(Icons.edit_outlined, size: 16.sp, color: AppColors.ink3),
+          ],
         ],
       ),
     );

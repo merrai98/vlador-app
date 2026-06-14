@@ -35,10 +35,10 @@ class BrandMark extends StatelessWidget {
         crossAxisSpacing: 3.w,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          dot(AppColors.logoTeal),
-          dot(AppColors.logoRust),
-          dot(AppColors.logoAmber),
-          dot(AppColors.logoBlue),
+          dot(AppColors.amber),
+          dot(AppColors.teal),
+          dot(AppColors.amber),
+          dot(AppColors.teal),
         ],
       ),
     );
@@ -293,7 +293,7 @@ class NetIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = online ? AppColors.good : AppColors.amber;
+    final c = online ? AppColors.good : AppColors.amberDeep;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -607,4 +607,272 @@ String initialsOf(String? name) {
   final parts = name.trim().split(RegExp(r'\s+'));
   final letters = parts.map((w) => w.isNotEmpty ? w[0] : '').toList();
   return letters.take(2).join().toUpperCase();
+}
+
+/// Keyboard-editable quantity field: − [number input] + .
+/// Supports focus traversal so the keyboard "next" action jumps to the field
+/// below (used in the colour sheet).
+class QtyField extends StatefulWidget {
+  final int value;
+  final ValueChanged<int> onChanged;
+  final FocusNode? focusNode;
+  final TextInputAction textInputAction;
+  final VoidCallback? onSubmitted;
+  const QtyField({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.focusNode,
+    this.textInputAction = TextInputAction.next,
+    this.onSubmitted,
+  });
+
+  @override
+  State<QtyField> createState() => _QtyFieldState();
+}
+
+class _QtyFieldState extends State<QtyField> {
+  late final TextEditingController _c =
+      TextEditingController(text: widget.value > 0 ? '${widget.value}' : '');
+
+  int get _val => int.tryParse(_c.text) ?? 0;
+
+  void _bump(int delta) {
+    final v = (_val + delta) < 0 ? 0 : (_val + delta);
+    _c.text = v > 0 ? '$v' : '';
+    _c.selection = TextSelection.collapsed(offset: _c.text.length);
+    widget.onChanged(v);
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  Widget _btn(String g, VoidCallback onTap) => SizedBox(
+        width: 30.w,
+        height: 36.h,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Center(
+              child: Text(g,
+                  style: AppText.inter(
+                      size: 18,
+                      weight: FontWeight.w600,
+                      color: AppColors.teal)),
+            ),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(11.r),
+        border: Border.all(color: AppColors.line, width: 1.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _btn('−', () => _bump(-1)),
+          Container(
+            width: 46.w,
+            height: 36.h,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              border:
+                  Border.symmetric(vertical: BorderSide(color: AppColors.line)),
+            ),
+            child: TextField(
+              controller: _c,
+              focusNode: widget.focusNode,
+              keyboardType: const TextInputType.numberWithOptions(decimal: false),
+              textInputAction: widget.textInputAction,
+              textAlign: TextAlign.center,
+              style: AppText.mono(
+                  size: 13.5, weight: FontWeight.w700, color: AppColors.ink),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: '0',
+                hintStyle: AppText.mono(size: 13.5, color: AppColors.ink3),
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: (t) => widget.onChanged(int.tryParse(t) ?? 0),
+              onSubmitted: (_) => widget.onSubmitted?.call(),
+            ),
+          ),
+          _btn('+', () => _bump(1)),
+        ],
+      ),
+    );
+  }
+}
+
+/// One colour row inside the [ColorQtySheet].
+class ColorRowData {
+  final String title; // colour name / code
+  final String meta; // e.g. "84 avail · cap 120"
+  final Color color;
+  final double available;
+  final double capacity;
+  final int initialQty;
+  final ValueChanged<int> onChanged;
+  ColorRowData({
+    required this.title,
+    required this.meta,
+    required this.color,
+    required this.available,
+    required this.capacity,
+    required this.initialQty,
+    required this.onChanged,
+  });
+}
+
+/// Bottom sheet listing one keyboard-editable stepper per colour. Shared by the
+/// build (new quotation) and edit flows.
+class ColorQtySheet extends StatefulWidget {
+  final String productName;
+  final String subtitle;
+  final List<ColorRowData> rows;
+  const ColorQtySheet({
+    super.key,
+    required this.productName,
+    required this.subtitle,
+    required this.rows,
+  });
+
+  @override
+  State<ColorQtySheet> createState() => _ColorQtySheetState();
+}
+
+class _ColorQtySheetState extends State<ColorQtySheet> {
+  late final List<FocusNode> _nodes =
+      List.generate(widget.rows.length, (_) => FocusNode());
+
+  @override
+  void dispose() {
+    for (final n in _nodes) {
+      n.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        ),
+        constraints: BoxConstraints(maxHeight: 0.82.sh),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: 10.h),
+            Container(
+              width: 36.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                  color: AppColors.bench2,
+                  borderRadius: BorderRadius.circular(4.r)),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(18.w, 8.h, 18.w, 9.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.productName,
+                      style:
+                          AppText.grotesk(size: 16, weight: FontWeight.w600)),
+                  SizedBox(height: 2.h),
+                  Text(widget.subtitle,
+                      style: AppText.mono(size: 11.5, color: AppColors.ink3)),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                itemCount: widget.rows.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(height: 1, color: AppColors.line2),
+                itemBuilder: (context, i) {
+                  final r = widget.rows[i];
+                  final last = i == widget.rows.length - 1;
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: 9.h),
+                    child: Row(
+                      children: [
+                        ColorSwatchTile(
+                            color: r.color,
+                            available: r.available,
+                            capacity: r.capacity),
+                        SizedBox(width: 11.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(r.title,
+                                  style: AppText.mono(
+                                      size: 13,
+                                      weight: FontWeight.w700,
+                                      color: AppColors.ink)),
+                              Text(r.meta,
+                                  style: AppText.mono(
+                                      size: 10.5, color: AppColors.ink3)),
+                            ],
+                          ),
+                        ),
+                        QtyField(
+                          value: r.initialQty,
+                          focusNode: _nodes[i],
+                          textInputAction: last
+                              ? TextInputAction.done
+                              : TextInputAction.next,
+                          onChanged: r.onChanged,
+                          onSubmitted: () {
+                            if (!last) {
+                              _nodes[i + 1].requestFocus();
+                            } else {
+                              FocusScope.of(context).unfocus();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.line2)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 11.h, 16.w, 12.h),
+                  child: PrimaryCta(
+                    label: 'Done',
+                    icon: Icons.check,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

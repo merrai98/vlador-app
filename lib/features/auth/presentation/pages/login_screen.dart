@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/constants/api_url.dart';
 import '../../../../core/constants/preferences_keys.dart';
 import '../../../../core/helpers/navigator.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -24,28 +23,18 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  late final TextEditingController _serverController =
-      TextEditingController(text: _hostOf(APIsUrl.baseUrl));
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscure = true;
 
-  String _hostOf(String url) =>
-      url.replaceFirst(RegExp(r'^https?://'), '').replaceAll('/', '');
-
   @override
   void dispose() {
-    _serverController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   void _signIn() {
-    final host = _serverController.text.trim();
-    if (host.isNotEmpty) {
-      APIsUrl.baseUrl = host.startsWith('http') ? host : 'https://$host';
-    }
     FocusScope.of(context).unfocus();
     context.read<AuthBloc>().add(
           LoginEvent(
@@ -87,12 +76,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text('Field order builder',
                         style: AppText.inter(size: 13, color: AppColors.ink3)),
                     SizedBox(height: 24.h),
-                    _Field(
-                      label: 'Server',
-                      icon: Icons.dns_outlined,
-                      controller: _serverController,
-                      keyboardType: TextInputType.url,
-                    ),
                     _Field(
                       label: 'Login',
                       icon: Icons.person_outline,
@@ -211,7 +194,7 @@ class _OfflineNote extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.tealTint,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFCDE7E7)),
+        border: Border.all(color: const Color(0xFFD9D3E8)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
