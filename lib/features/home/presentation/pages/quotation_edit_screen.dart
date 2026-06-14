@@ -100,6 +100,16 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
     return null;
   }
 
+  QuotationModel? _quotationFromResponse(Map<String, dynamic> r) {
+    try {
+      final data = r['result']?['data'];
+      if (data is List && data.isNotEmpty) {
+        return QuotationModel.fromJson(Map<String, dynamic>.from(data.first));
+      }
+    } catch (_) {}
+    return null;
+  }
+
   void _openSheet(_ProductGroup g) {
     showModalBottomSheet(
       context: context,
@@ -168,14 +178,21 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
         if (state is UpdateSaleOrderSuccessState) {
           final code = state.response['result']?['state_code'];
           if (code == 350) {
-            showDesignToast(context,
-                'edit_rejected_locked'.tr(),
-                amber: true);
+            showDesignToast(context, 'edit_rejected_locked'.tr(), amber: true);
+            NavigationService.navigateAndRemoveUntil(
+                destination: const HomeShell(initialIndex: 1));
           } else {
             showDesignToast(context, 'quotation_updated'.tr());
+            final q = _quotationFromResponse(state.response);
+            if (q != null) {
+              Navigator.of(context).pushReplacement(MaterialPageRoute(
+                  builder: (_) =>
+                      QuotationEditScreen(quotation: q, readOnly: true)));
+            } else {
+              NavigationService.navigateAndRemoveUntil(
+                  destination: const HomeShell(initialIndex: 1));
+            }
           }
-          NavigationService.navigateAndRemoveUntil(
-              destination: const HomeShell(initialIndex: 1));
         } else if (state is UpdateSaleOrderFailureState) {
           if (mounted) setState(() => _saving = false);
           showDesignToast(context, state.errorMessage, amber: true);
@@ -190,12 +207,23 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
           title: widget.quotation.name ?? '',
           trailing: widget.readOnly ? null : UnitsTally(units: _units),
         ),
-        body: Column(
+        body: Stack(
           children: [
-            _SearchBar(onChanged: (v) => setState(() => _search = v)),
-            Expanded(
-              child: widget.readOnly ? _buildView() : _buildEdit(),
+            Column(
+              children: [
+                _SearchBar(onChanged: (v) => setState(() => _search = v)),
+                Expanded(
+                  child: widget.readOnly ? _buildView() : _buildEdit(),
+                ),
+              ],
             ),
+            if (_saving)
+              Positioned.fill(
+                child: AbsorbPointer(
+                  absorbing: true,
+                  child: ColoredBox(color: AppColors.ink.withOpacity(0.04)),
+                ),
+              ),
           ],
         ),
         bottomNavigationBar: (widget.readOnly || !_dirty)

@@ -9,8 +9,6 @@ import '../../../../core/theme/app_text.dart';
 import '../../../../core/widgets/design/design_widgets.dart';
 import '../../data/models/models.dart';
 import '../bloc/home_bloc.dart';
-import '../bloc/product_quantity_cubit.dart';
-import 'build_quotation_screen.dart';
 import 'quotation_edit_screen.dart';
 
 class QuotationsScreen extends StatefulWidget {
@@ -178,10 +176,16 @@ class _QuotationCard extends StatelessWidget {
               SizedBox(width: 8.w),
               Expanded(
                 child: _GhostButton(
-                  label: 'duplicate'.tr(),
+                  label: 'view'.tr(),
                   bg: AppColors.field,
                   fg: AppColors.ink2,
-                  onTap: () => _duplicate(context),
+                  icon: Icons.visibility_outlined,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => QuotationEditScreen(
+                            quotation: quotation, readOnly: true)),
+                  ),
                 ),
               ),
             ]),
@@ -216,44 +220,6 @@ class _QuotationCard extends StatelessWidget {
               ),
             ]),
         ],
-      ),
-    );
-  }
-
-  Future<void> _duplicate(BuildContext context) async {
-    final partner = await HiveManager().getPartner(quotation.partnerId ?? 0);
-    if (partner == null) {
-      showDesignToast(context, 'catalog_not_cached'.tr(), amber: true);
-      return;
-    }
-    // Map this quotation's colour movements onto the partner's catalogue.
-    final prefill = <SelectedProduct>[];
-    final products = partner.capacities.expand((c) => c.products).toList();
-    for (final m in quotation.colorMovements) {
-      if ((m.quantity ?? 0) <= 0) continue;
-      ProductModel? prod;
-      for (final p in products) {
-        if (p.productTmplId == m.productTmplId) {
-          prod = p;
-          break;
-        }
-      }
-      if (prod == null) continue;
-      ColorModel? color;
-      for (final c in prod.colors) {
-        if (c.colorId == m.colorId) {
-          color = c;
-          break;
-        }
-      }
-      prefill.add(SelectedProduct(
-          product: prod, color: color, quantity: (m.quantity ?? 0).toInt()));
-    }
-    if (!context.mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => BuildQuotationScreen(partner: partner, prefill: prefill),
       ),
     );
   }

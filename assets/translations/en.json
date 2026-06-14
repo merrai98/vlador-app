@@ -134,5 +134,8 @@
   "catalog_not_cached": "Customer catalog not cached",
   "pending_changes": "pending changes",
   "tagline": "Field order builder",
-  "pulling_data": "Pulling latest products & customers…"
+  "pulling_data": "Pulling latest products & customers…",
+  "sync_results": "Sync results",
+  "synced_done": "Synced",
+  "cant_edit_350": "Can't edit · 350"
 }

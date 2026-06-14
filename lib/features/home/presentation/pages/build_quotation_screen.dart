@@ -16,6 +16,7 @@ import '../../data/models/models.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/product_quantity_cubit.dart';
 import 'home_shell.dart';
+import 'quotation_edit_screen.dart';
 
 /// Scenario 3 — Build a quotation (Browse → open). Products with colours open a
 /// colour sheet (keyboard-editable steppers, "next" jumps to the row below);
@@ -150,8 +151,15 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
           if (state is CreateSaleOrderSuccessState) {
             showDesignToast(context,
                 '${'quotation_created'.tr()} · ${_cubit.state.totalQuantity} ${'units_word'.tr()}');
-            NavigationService.navigateAndRemoveUntil(
-                destination: const HomeShell(initialIndex: 1));
+            final q = _quotationFromResponse(state.response);
+            if (q != null) {
+              Navigator.of(context).pushReplacement(MaterialPageRoute(
+                  builder: (_) =>
+                      QuotationEditScreen(quotation: q, readOnly: true)));
+            } else {
+              NavigationService.navigateAndRemoveUntil(
+                  destination: const HomeShell(initialIndex: 1));
+            }
           } else if (state is CreateSaleOrderFailureState) {
             if (mounted) setState(() => _saving = false);
             showDesignToast(context, state.errorMessage, amber: true);
@@ -251,6 +259,13 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
                   },
                 ),
               ),
+              if (_saving)
+                Positioned.fill(
+                  child: AbsorbPointer(
+                    absorbing: true,
+                    child: ColoredBox(color: AppColors.ink.withOpacity(0.04)),
+                  ),
+                ),
             ],
           ),
         ),
@@ -264,6 +279,16 @@ class _BuildQuotationScreenState extends State<BuildQuotationScreen> {
       if (sp.product.productTmplId == p.productTmplId) total += sp.quantity;
     }
     return total;
+  }
+
+  QuotationModel? _quotationFromResponse(Map<String, dynamic> r) {
+    try {
+      final data = r['result']?['data'];
+      if (data is List && data.isNotEmpty) {
+        return QuotationModel.fromJson(Map<String, dynamic>.from(data.first));
+      }
+    } catch (_) {}
+    return null;
   }
 }
 

@@ -6,8 +6,10 @@ abstract class SyncOfflineOrdersState extends HomeState {}
 class SyncOfflineOrdersLoadingState extends SyncOfflineOrdersState {}
 
 class SyncOfflineOrdersSuccessState extends SyncOfflineOrdersState {
-  final int conflicts;
-  SyncOfflineOrdersSuccessState({this.conflicts = 0});
+  final List<SyncItemResult> results;
+  SyncOfflineOrdersSuccessState({this.results = const []});
+
+  int get lockedCount => results.where((r) => r.locked).length;
 }
 
 class SyncOfflineOrdersFailureState extends SyncOfflineOrdersState {

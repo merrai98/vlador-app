@@ -13,6 +13,7 @@ import '../../../../core/widgets/design/design_widgets.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../splash/presentation/pages/splash_screen.dart';
 import '../../data/models/models.dart';
+import '../../domain/repositories/home_repository.dart';
 import '../bloc/home_bloc.dart';
 import 'offline_queue_edit_screen.dart';
 
@@ -41,7 +42,7 @@ class SyncScreen extends StatefulWidget {
 class _SyncScreenState extends State<SyncScreen> {
   bool _syncing = false;
   bool _showResult = false;
-  int _conflicts = 0;
+  List<SyncItemResult> _results = [];
 
   Future<List<_QueueItem>> _buildQueue() async {
     final creates = HiveManager().getAllSavedSaleOrders();
@@ -110,14 +111,15 @@ class _SyncScreenState extends State<SyncScreen> {
               setState(() {
                 _syncing = false;
                 _showResult = true;
-                _conflicts = state.conflicts;
+                _results = state.results;
               });
+              final locked = state.lockedCount;
               showDesignToast(
                 context,
-                state.conflicts > 0
-                    ? '${state.conflicts} ${'orders_rejected_350'.tr()}'
+                locked > 0
+                    ? '$locked ${'orders_rejected_350'.tr()}'
                     : 'synced_up_to_date'.tr(),
-                amber: state.conflicts > 0,
+                amber: locked > 0,
               );
             } else if (state is SyncOfflineOrdersFailureState) {
               setState(() => _syncing = false);
@@ -185,9 +187,10 @@ class _SyncScreenState extends State<SyncScreen> {
                             syncing: _syncing,
                             onTap: _syncing ? null : () => _editItem(it),
                           )),
-                      if (_showResult && _conflicts > 0) ...[
-                        SizedBox(height: 8.h),
-                        const _ConflictNote(),
+                      if (_showResult && _results.isNotEmpty) ...[
+                        SizedBox(height: 4.h),
+                        SectionLabel('sync_results'.tr()),
+                        ..._results.map((r) => _ResultRow(result: r)),
                       ],
                       SizedBox(height: 16.h),
                       _LanguageTile(),
@@ -268,29 +271,42 @@ class _QueueRow extends StatelessWidget {
   }
 }
 
-class _ConflictNote extends StatelessWidget {
-  const _ConflictNote();
+class _ResultRow extends StatelessWidget {
+  final SyncItemResult result;
+  const _ResultRow({required this.result});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(13.w),
-      decoration: BoxDecoration(
-        color: AppColors.lockWash,
-        borderRadius: BorderRadius.circular(14.r),
-      ),
+    final locked = result.locked;
+    return DesignCard(
+      margin: EdgeInsets.only(bottom: 9.h),
+      radius: 13,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lock_outline, size: 16.sp, color: AppColors.lock),
-          SizedBox(width: 9.w),
-          Expanded(
-            child: Text(
-              'conflict_350_note'.tr(),
-              style: AppText.inter(
-                  size: 12, color: AppColors.lock, height: 1.4),
+          Container(
+            width: 34.w,
+            height: 34.w,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: locked ? AppColors.lockWash : AppColors.goodWash,
+              borderRadius: BorderRadius.circular(10.r),
             ),
+            child: Icon(locked ? Icons.lock_outline : Icons.check,
+                size: 17.sp, color: locked ? AppColors.lock : AppColors.good),
           ),
+          SizedBox(width: 11.w),
+          Expanded(
+            child: Text(result.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.inter(size: 13, weight: FontWeight.w600)),
+          ),
+          SizedBox(width: 8.w),
+          Text(locked ? 'cant_edit_350'.tr() : 'synced_done'.tr(),
+              style: AppText.mono(
+                  size: 11,
+                  weight: FontWeight.w700,
+                  color: locked ? AppColors.lock : AppColors.good)),
         ],
       ),
     );

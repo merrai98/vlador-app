@@ -37,120 +37,95 @@ class HomeRepositoryImpl implements HomeRepository {
   }
 
   @override
-  Future<Either<Failure, int>> syncOfflineOrders() async {
-    int conflicts = 0;
+  Future<Either<Failure, List<SyncItemResult>>> syncOfflineOrders() async {
+    final results = <SyncItemResult>[];
     final offlineOrders = HiveManager().getAllSavedSaleOrders();
     final updateOrders = HiveManager().getAllSavedUpdateSaleOrders();
 
     if (offlineOrders.isEmpty && updateOrders.isEmpty) {
-      return const Right(0);
+      return const Right(<SyncItemResult>[]);
     }
 
-    // 1. Sync new orders (Add)
-    if (offlineOrders.isNotEmpty) {
-      final data = {
-        "data": offlineOrders.map((e) => e.toJson()).toList(),
-      };
-
-      final result = await homeRemoteDataSource.createSaleOrder(data);
-      final Either<Failure, int> syncResult = await result.fold(
-        (failure) async => Left<Failure, int>(failure),
+    // 1. Sync new orders (creates never return 350).
+    for (final order in offlineOrders) {
+      final partner = await HiveManager().getPartner(order.partnerId);
+      final label = partner?.partnerName ?? 'New quotation';
+      final res = await homeRemoteDataSource.createSaleOrder(order.toJson());
+      Failure? fail;
+      await res.fold(
+        (f) async => fail = f,
         (success) async {
           try {
-            final dynamic resultValue = success["result"];
-            if (resultValue is Map<String, dynamic> && resultValue["state_code"] == 350) {
-              final dynamic resultData = resultValue["data"];
-              if (resultData is List) {
-                for (var partnerData in resultData) {
-                  final partnerId = partnerData["partner_id"];
-                  final dynamic quotationsData = partnerData["quotations"];
-                  if (partnerId != null && quotationsData is List) {
-                    final List<num> quotationIds = quotationsData
-                        .where((q) => q["quotation_id"] != null)
-                        .map((q) => q["quotation_id"] as num)
-                        .toList();
-                    await HiveManager().removeQuotationsFromPartner(partnerId, quotationIds);
-                    conflicts += quotationIds.length;
-                  }
-                }
-              }
-            } else {
-              final dynamic resultData = resultValue?["data"];
-              if (resultData is List) {
-                final List<QuotationModel> quotations = resultData
-                    .map((item) => QuotationModel.fromJson(item))
-                    .toList();
-
-                for (var quotation in quotations) {
-                  await HiveManager().addQuotationToPartner(quotation);
-                }
+            final rv = success["result"];
+            final data = rv is Map ? rv["data"] : null;
+            if (data is List) {
+              for (final item in data) {
+                try {
+                  await HiveManager().addQuotationToPartner(
+                      QuotationModel.fromJson(Map<String, dynamic>.from(item)));
+                } catch (_) {}
               }
             }
           } catch (e) {
-            if (kDebugMode) {
-              print("Error updating local cache during sync (create): $e");
-            }
+            if (kDebugMode) print("sync create cache error: $e");
           }
-          HiveManager().clearSaleOrders();
-          return Right<Failure, int>(conflicts);
+          await order.delete();
         },
       );
-      if (syncResult.isLeft()) return syncResult;
+      if (fail != null) return Left(fail!);
+      results.add(SyncItemResult(label: label, isCreate: true, locked: false));
     }
 
-    // 2. Sync updates
+    // 2. Sync edits (may return 350 = confirmed, can't edit).
     if (updateOrders.isNotEmpty) {
-      final data = {
-        "data": updateOrders.map((e) => e.toJson()).toList(),
-      };
-      
-      final result = await homeRemoteDataSource.updateSaleOrder(data);
-      final Either<Failure, int> syncResult = await result.fold(
-        (failure) async => Left<Failure, int>(failure),
-        (success) async {
-          try {
-            final dynamic resultValue = success["result"];
-            if (resultValue is Map<String, dynamic> && resultValue["state_code"] == 350) {
-              final dynamic resultData = resultValue["data"];
-              if (resultData is List) {
-                for (var partnerData in resultData) {
-                  final partnerId = partnerData["partner_id"];
-                  final dynamic quotationsData = partnerData["quotations"];
-                  if (partnerId != null && quotationsData is List) {
-                    final List<num> quotationIds = quotationsData
-                        .where((q) => q["quotation_id"] != null)
-                        .map((q) => q["quotation_id"] as num)
-                        .toList();
-                    await HiveManager().removeQuotationsFromPartner(partnerId, quotationIds);
-                    conflicts += quotationIds.length;
+      final partners = await HiveManager().getAllPartners();
+      String nameFor(num id) {
+        for (final p in partners) {
+          for (final q in p.quotations) {
+            if (q.quotationId == id) return q.name ?? 'Order #$id';
+          }
+        }
+        return 'Order #$id';
+      }
+
+      for (final order in updateOrders) {
+        final label = nameFor(order.saleOrderId);
+        final res = await homeRemoteDataSource.updateSaleOrder(order.toJson());
+        Failure? fail;
+        bool locked = false;
+        await res.fold(
+          (f) async => fail = f,
+          (success) async {
+            try {
+              final rv = success["result"];
+              final code = rv is Map ? rv["state_code"] : null;
+              if (code == 350) {
+                locked = true;
+              } else {
+                final data = rv is Map ? rv["data"] : null;
+                if (data is List) {
+                  for (final item in data) {
+                    try {
+                      await HiveManager().addQuotationToPartner(
+                          QuotationModel.fromJson(
+                              Map<String, dynamic>.from(item)));
+                    } catch (_) {}
                   }
                 }
               }
-            } else {
-              final dynamic resultData = resultValue?["data"];
-              if (resultData is List) {
-                final List<QuotationModel> quotations = resultData
-                    .map((item) => QuotationModel.fromJson(item))
-                    .toList();
-
-                for (var quotation in quotations) {
-                  await HiveManager().addQuotationToPartner(quotation);
-                }
-              }
+            } catch (e) {
+              if (kDebugMode) print("sync update cache error: $e");
             }
-          } catch (e) {
-            if (kDebugMode) {
-              print("Error updating local cache during sync (update): $e");
-            }
-          }
-          HiveManager().clearUpdateSaleOrders();
-          return Right<Failure, int>(conflicts);
-        },
-      );
-      if (syncResult.isLeft()) return syncResult;
+            await order.delete();
+          },
+        );
+        if (fail != null) return Left(fail!);
+        results.add(
+            SyncItemResult(label: label, isCreate: false, locked: locked));
+      }
     }
 
-    return Right(conflicts);
+    return Right(results);
   }
 
   @override

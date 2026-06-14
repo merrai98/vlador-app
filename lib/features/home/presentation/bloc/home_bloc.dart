@@ -13,6 +13,7 @@ import '../../domain/usecases/create_sale_order_use_case.dart';
 import '../../domain/usecases/update_sale_order_use_case.dart';
 import '../../domain/usecases/sync_offline_orders_use_case.dart';
 import '../../domain/usecases/get_products_use_case.dart';
+import '../../domain/repositories/home_repository.dart';
 import '../../../../core/helpers/hive_manager.dart';
 import '../../data/models/models.dart';
 
