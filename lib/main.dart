@@ -10,6 +10,7 @@ import 'bloc_observer.dart';
 import 'core/constants/app_constants.dart';
 import 'core/helpers/hive_manager.dart';
 import 'core/utils/language_cubit/language_cubit.dart';
+import 'core/utils/network_cubit/network_cubit.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/home/presentation/bloc/home_bloc.dart';
 import 'injection_container.dart' as di;
@@ -30,6 +31,7 @@ void main() async {
     MultiBlocProvider(
       providers: [
         BlocProvider(create: (context) => di.sl<LanguageCubit>(), lazy: false),
+        BlocProvider(create: (context) => di.sl<NetworkCubit>(), lazy: false),
         BlocProvider(create: (context) => di.sl<HomeBloc>(), lazy: false),
         BlocProvider(create: (context) => di.sl<AuthBloc>(), lazy: false),
       ],

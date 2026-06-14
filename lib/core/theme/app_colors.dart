@@ -1,25 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Brand Colors — prototype "Lightbox" teal
-  static const Color brandColor = Color(0xFF0B5E63);
-  static const Color brandColorLight = Color(0xFFEDEEF1);
-  static const Color brandDark = Color(0xFF084146);
-  static const Color brandWash = Color(0xFFE1EFEF);
-  static const Color brandTint = Color(0xFFF0F7F7);
-  static const Color brandGradientEnd = Color(0xFF11878F);
-
-  // Prototype neutrals & accents
-  static const Color ink = Color(0xFF15171C);
-  static const Color ink2 = Color(0xFF4A4F59);
-  static const Color ink3 = Color(0xFF878D99);
-  static const Color lineColor = Color(0xFFE2E5EA);
-  static const Color amber = Color(0xFFB3791C);
-  static const Color amberWash = Color(0xFFF6ECD8);
-  static const Color goodGreen = Color(0xFF1F7A4D);
-  static const Color goodWash = Color(0xFFE4F2EA);
-  static const Color lockRed = Color(0xFF9A3B3B);
-  static const Color lockWash = Color(0xFFF4E7E7);
+  // Brand Colors
+  static const Color brandColor = Color(0xFF623A60);
+  static const Color brandColorLight = Color(0xFFFDF5F0);
 
   // Primary Colors
   static const Color primary = Color(0xFF3B86FF);
@@ -98,4 +82,52 @@ class AppColors {
   static const Color cardShadow = Color(0x29919EAB);
   static const Color semiWhite = Color(0xFFECF1F4);
   static const Color darkGray = Color(0xFF172A47);
+
+  // ============================================================
+  // ColorDesk design tokens (mirrors the reference :root CSS vars)
+  // ============================================================
+  static const Color ink = Color(0xFF15171C);
+  static const Color ink2 = Color(0xFF4A4F59);
+  static const Color ink3 = Color(0xFF878D99);
+
+  static const Color bg = Color(0xFFEDEEF1);
+  static const Color card = Color(0xFFFFFFFF);
+  static const Color field = Color(0xFFEDEEF1);
+  static const Color line = Color(0xFFE2E5EA);
+  static const Color line2 = Color(0xFFEBEDF1);
+
+  static const Color teal = Color(0xFF0B5E63);
+  static const Color tealDark = Color(0xFF084146);
+  static const Color tealWash = Color(0xFFE1EFEF);
+  static const Color tealTint = Color(0xFFF0F7F7);
+
+  static const Color good = Color(0xFF1F7A4D);
+  static const Color goodWash = Color(0xFFE4F2EA);
+  static const Color amber = Color(0xFFB3791C);
+  static const Color amberWash = Color(0xFFF6ECD8);
+  static const Color amberInk = Color(0xFF1C1305);
+  static const Color amberDeep = Color(0xFF8A5A07);
+  static const Color lock = Color(0xFF9A3B3B);
+  static const Color lockWash = Color(0xFFF4E7E7);
+  static const Color bench2 = Color(0xFFDCDFE5);
+
+  static const Color logoTeal = teal;
+  static const Color logoRust = Color(0xFFC25B4E);
+  static const Color logoAmber = amber;
+  static const Color logoBlue = Color(0xFF3D6B8C);
+
+  static const List<Color> markerPalette = [
+    logoRust,
+    logoBlue,
+    good,
+    teal,
+    amber,
+    Color(0xFF5B616B),
+  ];
+
+  static Color markerFor(Object? seed) {
+    final int h = (seed?.hashCode ?? 0).abs();
+    return markerPalette[h % markerPalette.length];
+  }
+
 }

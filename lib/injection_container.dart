@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/network/network_info.dart';
 import 'core/utils/language_cubit/language_cubit.dart';
+import 'core/utils/network_cubit/network_cubit.dart';
 import 'core/utils/shared_preferences_manger.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
@@ -55,6 +56,8 @@ Future<void> injectionCore() async {
   );
 
   sl.registerFactory(() => LanguageCubit());
+
+  sl.registerLazySingleton(() => NetworkCubit(networkInfo: sl()));
 
   final sharedPreferences = await SharedPreferences.getInstance();
 

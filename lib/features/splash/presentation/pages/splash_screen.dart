@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/helpers/navigator.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/enums.dart';
 import '../../../../core/utils/helper_function.dart';
+import '../../../../core/widgets/design/design_widgets.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,39 +21,38 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
-    _startDelay();
     super.initState();
+    _startDelay();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFEDEEF1), // Matching the Quotations screen background
-      body: Center(
-        child: Text(
-          'valdor',
-          style: TextStyle(
-            color: const Color(0xFF0B5E63), // Matching the app's primary accent color
-            fontSize: 48.sp,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
-          ),
-        ),
-      ),
-    );
-  }
-
-  _startDelay() {
-    const duration = Duration(milliseconds: 1500); // Slightly longer to appreciate the splash
-    return Timer(duration, () async {
+  void _startDelay() {
+    Timer(const Duration(milliseconds: 1400), () async {
       try {
         NavigationService.navigateAndRemoveUntil(
           destination: await navigatorOptions(),
-          transitionEffect: TransitionEffect.slideHorizontal,
+          transitionEffect: TransitionEffect.fade,
         );
       } catch (err) {
         log(err.toString());
       }
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BrandLogo(dotSize: 40, fontSize: 30),
+            SizedBox(height: 12.h),
+            Text('Field order builder',
+                style: AppText.inter(size: 13, color: AppColors.ink3)),
+          ],
+        ),
+      ),
+    );
   }
 }

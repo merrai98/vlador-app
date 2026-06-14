@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/app_constants.dart';
 import 'app_colors.dart';
@@ -8,8 +9,9 @@ abstract class ApplicationTheme {
   static ThemeData buildTheme() {
     return ThemeData(
       useMaterial3: true,
-      colorSchemeSeed: AppColors.brandColor,
-      scaffoldBackgroundColor: AppColors.white,
+      colorSchemeSeed: AppColors.teal,
+      scaffoldBackgroundColor: AppColors.bg,
+      textTheme: GoogleFonts.interTextTheme(),
       fontFamily: AppConstants.mainFont,
       textButtonTheme: _buildTextButtonTheme(),
       iconButtonTheme: _buildIconButtonTheme(),

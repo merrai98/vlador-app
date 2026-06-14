@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../features/auth/presentation/pages/login_screen.dart';
-import '../../features/home/presentation/pages/main_screen.dart';
-import '../../features/home/presentation/pages/sync_screen.dart';
+import '../../features/home/presentation/pages/home_shell.dart';
+import '../../features/home/presentation/pages/download_screen.dart';
 import '../../injection_container.dart';
 import '../constants/preferences_keys.dart';
 import '../helpers/user_local.dart';
@@ -37,9 +37,9 @@ Future<Widget> navigatorOptions() async {
     final lastSync = sl<SharedPreferencesService>().getData<String>(PreferencesKeys.lastSync);
 
     if (lastSync == null) {
-      return const SyncScreen();
+      return const DownloadScreen();
     }
-    return const MainScreen();
+    return const HomeShell();
   }
   return const LoginScreen();
 }

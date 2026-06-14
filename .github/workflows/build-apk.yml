@@ -1,49 +1,64 @@
-name: Build Android APK
+name: Build APK
 
-# Runs on every push to main/master, and can be started by hand
-# from the repo's "Actions" tab (Run workflow).
+# Builds a release APK you can download.
+#  - On every push to main/master and on manual runs: the APK is uploaded as a
+#    build artifact (open the Actions run -> Artifacts -> download "valdor-apk").
+#  - On pushing a tag like v1.0.0: the APK is ALSO attached to a GitHub Release.
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
+    tags: ['v*']
   workflow_dispatch:
+
+permissions:
+  contents: write # needed to create a Release on tag pushes
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      # Uses the latest STABLE Flutter. If `flutter pub get` fails with a
-      # "requires SDK version ^3.10.0" message, change `channel: stable`
-      # to `channel: beta` below and re-run.
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Flutter version
+      - name: Show versions
         run: flutter --version
 
-      - name: Install dependencies
+      - name: Get dependencies
         run: flutter pub get
 
-      # Release APK, signed with the debug key (your build.gradle already
-      # points the release signingConfig at debug), so it installs on a
-      # tablet by sideloading without any keystore setup.
-      - name: Build release APK
+      # The release build is signed with the debug key
+      # (see android/app/build.gradle.kts), so the APK installs with no keystore
+      # secrets. Add a real keystore + key.properties later for store releases.
+      - name: Build release APK (universal)
         run: flutter build apk --release
+
+      - name: Stage APK
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/valdor-${GITHUB_SHA::7}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: valdor-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: valdor-apk
+          path: dist/*.apk
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach APK to Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.apk
