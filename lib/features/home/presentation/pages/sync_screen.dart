@@ -2,11 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/preferences_keys.dart';
 import '../../../../core/helpers/navigator.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_style.dart';
-import '../../../../core/utils/shared_preferences_manger.dart';
 import '../../../../injection_container.dart';
 import '../bloc/home_bloc.dart';
 import 'main_screen.dart';
@@ -44,70 +41,122 @@ class _SyncScreenState extends State<SyncScreen> {
           if (state is GetProductsLoadingState) {
             progress = state.progress;
           }
+          final bool isError = state is GetProductsErrorState;
+          final bool isLoading =
+              state is GetProductsLoadingState || state is HomeInitial;
 
           return Center(
             child: Padding(
-              padding: EdgeInsets.all(32.w),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'valdor',
-                    style: TextStyle(
-                      color: AppColors.brandColor,
-                      fontSize: 48.sp,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  SizedBox(height: 40.h),
-                  if (state is GetProductsLoadingState ||
-                      state is HomeInitial) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8.r),
-                      child: LinearProgressIndicator(
-                        value: progress > 0 ? progress : null,
-                        minHeight: 12.h,
-                        backgroundColor: AppColors.brandColor.withOpacity(0.2),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppColors.brandColor),
-                      ),
-                    ),
-                    // SizedBox(height: 16.h),
-                    // Text(
-                    //   '${(progress * 100).toInt()}%',
-                    //   style: AppTextStyles.black16Bold,
-                    // ),
-                    SizedBox(height: 24.h),
-                    Text(
-                      'downloading_data'.tr(),
-                      style: AppTextStyles.black16,
-                      textAlign: TextAlign.center,
-                    ),
-                  ] else if (state is GetProductsErrorState) ...[
-                    Icon(Icons.error_outline, color: Colors.red, size: 60.r),
-                    SizedBox(height: 16.h),
-                    Text(
-                      state.message,
-                      style: AppTextStyles.black16.copyWith(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 24.h),
-                    ElevatedButton(
-                      onPressed: () {
-                        context.read<HomeBloc>().add(GetProductsEvent());
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.brandColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                      ),
-                      child:  Text('retry'.tr(),
-                          style: TextStyle(color: Colors.white)),
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(24.w, 28.h, 24.w, 24.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
                     ),
                   ],
-                ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 64.w,
+                      height: 64.w,
+                      decoration: BoxDecoration(
+                        color: isError
+                            ? AppColors.lockWash
+                            : AppColors.brandWash,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isError ? Icons.cloud_off : Icons.cloud_sync,
+                        size: 32.r,
+                        color:
+                            isError ? AppColors.lockRed : AppColors.brandColor,
+                      ),
+                    ),
+                    SizedBox(height: 18.h),
+                    Text(
+                      'valdor',
+                      style: TextStyle(
+                        color: AppColors.brandColor,
+                        fontSize: 26.sp,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    if (isLoading) ...[
+                      Text(
+                        'downloading_data'.tr(),
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: AppColors.ink3,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 22.h),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8.r),
+                        child: LinearProgressIndicator(
+                          value: progress > 0 ? progress : null,
+                          minHeight: 10.h,
+                          backgroundColor: AppColors.brandColor.withOpacity(0.12),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppColors.brandColor),
+                        ),
+                      ),
+                      if (progress > 0) ...[
+                        SizedBox(height: 10.h),
+                        Text(
+                          '${(progress * 100).toInt()}%',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.brandColor,
+                          ),
+                        ),
+                      ],
+                    ] else if (isError) ...[
+                      Text(
+                        state.message,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: AppColors.lockRed,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 22.h),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46.h,
+                        child: ElevatedButton.icon(
+                          onPressed: () => context
+                              .read<HomeBloc>()
+                              .add(GetProductsEvent()),
+                          icon: const Icon(Icons.refresh, color: Colors.white),
+                          label: Text('retry'.tr(),
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.brandColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           );
