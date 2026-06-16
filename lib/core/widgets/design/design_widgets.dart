@@ -1,9 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
+import '../../utils/network_cubit/network_cubit.dart';
 
 /// ============================================================================
 /// ColorDesk design component library.
@@ -184,6 +186,9 @@ class DesignAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final Widget? trailing;
   final int titleMaxLines;
+
+  /// Shows the global ONLINE / OFFLINE badge at the far right of every screen.
+  final bool showNetworkStatus;
   const DesignAppBar({
     super.key,
     required this.leading,
@@ -191,6 +196,7 @@ class DesignAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     this.trailing,
     this.titleMaxLines = 1,
+    this.showNetworkStatus = true,
   });
 
   @override
@@ -234,9 +240,51 @@ class DesignAppBar extends StatelessWidget implements PreferredSizeWidget {
                 SizedBox(width: 8.w),
                 trailing!,
               ],
+              if (showNetworkStatus) ...[
+                SizedBox(width: 8.w),
+                const NetworkStatusBadge(),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Global connectivity badge — a coloured dot plus ONLINE / OFFLINE text.
+/// Reads [NetworkCubit] so it stays live on every screen it is placed on.
+class NetworkStatusBadge extends StatelessWidget {
+  /// When false, only the coloured dot is shown (handy in tight app bars).
+  final bool showLabel;
+  const NetworkStatusBadge({super.key, this.showLabel = true});
+
+  @override
+  Widget build(BuildContext context) {
+    final online = context.watch<NetworkCubit>().state;
+    final color = online ? AppColors.good : AppColors.amberDeep;
+    final wash = online ? AppColors.goodWash : AppColors.amberWash;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: wash,
+        borderRadius: BorderRadius.circular(20.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7.w,
+            height: 7.w,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          if (showLabel) ...[
+            SizedBox(width: 6.w),
+            Text(online ? 'online_caps'.tr() : 'offline_caps'.tr(),
+                style: AppText.mono(
+                    size: 10.5, weight: FontWeight.w700, color: color)),
+          ],
+        ],
       ),
     );
   }

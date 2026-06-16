@@ -345,6 +345,11 @@ class ColorMovementModel {
   @HiveField(8)
   final num? qtyAvailable;
 
+  /// Total available quantity across all colours of this product
+  /// (API field `all_qty`).
+  @HiveField(9)
+  final num? allQty;
+
   ColorMovementModel({
     required this.movementId,
     required this.productTmplId,
@@ -353,7 +358,7 @@ class ColorMovementModel {
     required this.capacity,
     this.colorId,
     required this.colorName,
-    this.colorHash, this.qtyAvailable,
+    this.colorHash, this.qtyAvailable, this.allQty,
   });
 
   factory ColorMovementModel.fromJson(Map<String, dynamic> json) =>
@@ -365,6 +370,7 @@ class ColorMovementModel {
         capacity: json['capacity'],
         colorId: json['color_id'],
         qtyAvailable: json['qty_avaliable'],
+        allQty: json['all_qty'],
         colorName: json['color_name'] ?? '',
         colorHash: json['color_hash'],
       );

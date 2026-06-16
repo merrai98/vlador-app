@@ -13,6 +13,7 @@ import '../../../../injection_container.dart';
 import '../../data/models/models.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/product_quantity_cubit.dart';
+import '../../../../core/widgets/design/design_widgets.dart';
 import 'main_screen.dart';
 
 class ProductSummaryScreen extends StatefulWidget {
@@ -199,6 +200,12 @@ class _ProductSummaryScreenState extends State<ProductSummaryScreen> {
             icon: const Icon(Icons.arrow_back, color: Colors.black87),
             onPressed: () => Navigator.pop(context),
           ),
+          actions: [
+            Padding(
+              padding: EdgeInsets.only(right: 12.w),
+              child: const Center(child: NetworkStatusBadge()),
+            ),
+          ],
         ),
         body: Column(
           children: [

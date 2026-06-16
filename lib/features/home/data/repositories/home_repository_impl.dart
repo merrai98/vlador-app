@@ -137,7 +137,8 @@ class HomeRepositoryImpl implements HomeRepository {
       (filePath) async {
         try {
           final file = File(filePath);
-          final String content = await file.readAsString();
+          final List<int> bytes = await file.readAsBytes();
+          final String content = _decodePayload(bytes);
           final Map<String, dynamic> data = json.decode(content);
 
           await   HiveManager().saveFullData(data);
@@ -160,5 +161,27 @@ class HomeRepositoryImpl implements HomeRepository {
         }
       },
     );
+  }
+
+  /// Turns the downloaded get_products payload into a JSON string.
+  ///
+  /// The backend returns the response gzip-compressed (`Content-Encoding:
+  /// gzip`). Dio's default adapter usually decompresses it transparently, so
+  /// the file on disk is already plain JSON — but on some platforms/adapters
+  /// the raw gzip bytes are written instead. We sniff the magic bytes and
+  /// handle both, so the sync works either way:
+  ///   • GZIP (`\x1f\x8b`) → gunzipped with dart:io's GZipCodec
+  ///   • otherwise         → treated as UTF-8 JSON text
+  String _decodePayload(List<int> bytes) {
+    if (bytes.isEmpty) return '';
+
+    final bool isGzip =
+        bytes.length >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B;
+
+    if (isGzip) {
+      return utf8.decode(GZipCodec().decode(bytes));
+    }
+
+    return utf8.decode(bytes);
   }
 }

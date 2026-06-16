@@ -14,6 +14,7 @@ import '../../../../core/widgets/custom_loading_widget/loading_widget.dart';
 import '../../../../injection_container.dart';
 import '../../data/models/models.dart';
 import '../bloc/home_bloc.dart';
+import '../../../../core/widgets/design/design_widgets.dart';
 import 'main_screen.dart';
 
 class QuotationDetailsScreen extends StatefulWidget {
@@ -323,6 +324,10 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen>
                       ),
                       onPressed: () => _onSavePressed(context),
                     ),
+                  Padding(
+                    padding: EdgeInsets.only(right: 12.w),
+                    child: const Center(child: NetworkStatusBadge()),
+                  ),
                 ],
               ),
               SliverToBoxAdapter(child: _buildQuotationHeader()),

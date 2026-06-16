@@ -422,13 +422,14 @@ class ColorMovementModelAdapter extends TypeAdapter<ColorMovementModel> {
       colorName: fields[6] as String?,
       colorHash: fields[7] as String?,
       qtyAvailable: fields[8] as num?,
+      allQty: fields[9] as num?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ColorMovementModel obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.movementId)
       ..writeByte(1)
@@ -446,7 +447,9 @@ class ColorMovementModelAdapter extends TypeAdapter<ColorMovementModel> {
       ..writeByte(7)
       ..write(obj.colorHash)
       ..writeByte(8)
-      ..write(obj.qtyAvailable);
+      ..write(obj.qtyAvailable)
+      ..writeByte(9)
+      ..write(obj.allQty);
   }
 
   @override

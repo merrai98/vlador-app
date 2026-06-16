@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:valdor_application/features/home/presentation/pages/partner_details_screen.dart';
 import '../../../../core/helpers/hive_manager.dart';
+import '../../../../core/widgets/design/design_widgets.dart';
 import '../../data/models/models.dart';
 
 class SelectPartnerScreen extends StatefulWidget {
@@ -101,6 +102,12 @@ class _SelectPartnerScreenState extends State<SelectPartnerScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          Padding(
+            padding: EdgeInsets.only(right: 12.w),
+            child: const Center(child: NetworkStatusBadge()),
+          ),
+        ],
       ),
       body: Column(
         children: [

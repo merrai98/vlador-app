@@ -149,10 +149,6 @@ class _SyncScreenState extends State<SyncScreen> {
                       text: '↑', color: AppColors.amber),
                   label: 'sync_tab'.tr(),
                   title: '${items.length} ${'pending_changes'.tr()}',
-                  trailing: Text(online ? 'online_caps'.tr() : 'offline_caps'.tr(),
-                      style: AppText.mono(
-                          size: 11,
-                          color: online ? AppColors.good : AppColors.amberDeep)),
                 ),
                 Expanded(
                   child: ListView(
@@ -194,8 +190,12 @@ class _SyncScreenState extends State<SyncScreen> {
                       ],
                       SizedBox(height: 16.h),
                       _LanguageTile(),
-                      SizedBox(height: 10.h),
-                      _LogoutButton(onTap: _logout),
+                      // Logout requires a server round-trip to end the session,
+                      // so it's only offered while online.
+                      if (online) ...[
+                        SizedBox(height: 10.h),
+                        _LogoutButton(onTap: _logout),
+                      ],
                     ],
                   ),
                 ),

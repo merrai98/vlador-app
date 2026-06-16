@@ -72,7 +72,10 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   }) async {
     try {
       final directory = await getTemporaryDirectory();
-      final String savePath = "${directory.path}/products.json";
+      // The server returns the payload gzip-compressed (Content-Encoding:
+      // gzip), which may arrive already-decompressed or as raw gzip bytes, so
+      // use a neutral filename and detect the format when reading.
+      final String savePath = "${directory.path}/products_payload.bin";
 
       String path = APIsUrl.getProducts;
       if (lastSync != null && lastSync.isNotEmpty) {

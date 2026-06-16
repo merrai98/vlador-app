@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/utils/language_cubit/language_cubit.dart';
+import '../../../../core/utils/network_cubit/network_cubit.dart';
 import '../../../../core/utils/toast_manager.dart';
 import '../../../../core/widgets/custom_loading_widget/loading_widget.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../../core/widgets/design/design_widgets.dart';
 import '../../../splash/presentation/pages/splash_screen.dart';
 
 class ManageScreen extends StatefulWidget {
@@ -26,6 +28,7 @@ class _ManageScreenState extends State<ManageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final online = context.watch<NetworkCubit>().state;
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is LogoutLoadingState) {
@@ -64,6 +67,12 @@ class _ManageScreenState extends State<ManageScreen> {
               fontSize: 20.sp,
             ),
           ),
+          actions: [
+            Padding(
+              padding: EdgeInsets.only(right: 12.w),
+              child: const Center(child: NetworkStatusBadge()),
+            ),
+          ],
         ),
         body: RawScrollbar(
           controller: _scrollController,
@@ -84,13 +93,16 @@ class _ManageScreenState extends State<ManageScreen> {
                   title: 'change_language'.tr(),
                   onTap: () => _showLanguageDialog(context),
                 ),
-                SizedBox(height: 12.h),
-                _buildManageTile(
-                  icon: Icons.logout,
-                  title: 'logout'.tr(),
-                  iconColor: Colors.redAccent,
-                  onTap: () => _showLogoutConfirmationDialog(context),
-                ),
+                // Logout needs a server round-trip, so only show it online.
+                if (online) ...[
+                  SizedBox(height: 12.h),
+                  _buildManageTile(
+                    icon: Icons.logout,
+                    title: 'logout'.tr(),
+                    iconColor: Colors.redAccent,
+                    onTap: () => _showLogoutConfirmationDialog(context),
+                  ),
+                ],
               ],
             ),
           ),

@@ -26,6 +26,15 @@ class _ProductGroup {
   _ProductGroup(this.productId, this.name, this.movements);
 
   bool get hasColor => movements.any((m) => m.colorId != null);
+
+  /// Total available quantity across all colours of the product. Prefers the
+  /// API's `all_qty`; falls back to summing each colour's available quantity.
+  num get allQty {
+    for (final m in movements) {
+      if (m.allQty != null) return m.allQty!;
+    }
+    return movements.fold<num>(0, (s, m) => s + (m.qtyAvailable ?? 0));
+  }
 }
 
 /// Scenario 4 — edit a draft's colour quantities (product cards → colour popup,
@@ -127,7 +136,8 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
       barrierColor: AppColors.ink.withOpacity(0.42),
       builder: (_) => ColorQtySheet(
         productName: g.name,
-        subtitle: 'set_qty_per_color'.tr(),
+        subtitle:
+            '${'total_avail'.tr()} ${g.allQty.toInt()} · ${'set_qty_per_color'.tr()}',
         rows: g.movements.map((m) {
           final avail = (m.qtyAvailable ?? 0).toDouble();
           final cap = (m.capacity ?? 0).toDouble();
@@ -303,7 +313,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
               ),
               SizedBox(height: 10.h),
               if (g.hasColor)
-                _SwatchStrip(movements: g.movements)
+                _SwatchStrip(movements: g.movements, allQty: g.allQty)
               else
                 _InlineQty(
                   movement: g.movements.first,
@@ -421,33 +431,43 @@ class _SearchBar extends StatelessWidget {
 
 class _SwatchStrip extends StatelessWidget {
   final List<ColorMovementModel> movements;
-  const _SwatchStrip({required this.movements});
+  final num allQty;
+  const _SwatchStrip({required this.movements, this.allQty = 0});
 
   @override
   Widget build(BuildContext context) {
     final shown = movements.take(5).toList();
     final extra = movements.length - shown.length;
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...shown.map((m) => Padding(
-              padding: EdgeInsets.only(right: 6.w),
-              child: Container(
-                width: 28.w,
-                height: 28.w,
-                decoration: BoxDecoration(
-                  color: hexToColor(m.colorHash),
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(color: AppColors.ink.withOpacity(0.08)),
-                ),
-              ),
-            )),
-        if (extra > 0)
-          Text('+$extra', style: AppText.mono(size: 11, color: AppColors.ink3)),
-        const Spacer(),
-        Icon(Icons.touch_app_outlined, size: 15.sp, color: AppColors.ink3),
-        SizedBox(width: 4.w),
-        Text('tap_to_edit'.tr(),
-            style: AppText.mono(size: 10, color: AppColors.ink3)),
+        Text('${'total_avail'.tr()} ${allQty.toInt()}',
+            style: AppText.mono(size: 11.5, color: AppColors.ink3)),
+        SizedBox(height: 7.h),
+        Row(
+          children: [
+            ...shown.map((m) => Padding(
+                  padding: EdgeInsets.only(right: 6.w),
+                  child: Container(
+                    width: 28.w,
+                    height: 28.w,
+                    decoration: BoxDecoration(
+                      color: hexToColor(m.colorHash),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(color: AppColors.ink.withOpacity(0.08)),
+                    ),
+                  ),
+                )),
+            if (extra > 0)
+              Text('+$extra',
+                  style: AppText.mono(size: 11, color: AppColors.ink3)),
+            const Spacer(),
+            Icon(Icons.touch_app_outlined, size: 15.sp, color: AppColors.ink3),
+            SizedBox(width: 4.w),
+            Text('tap_to_edit'.tr(),
+                style: AppText.mono(size: 10, color: AppColors.ink3)),
+          ],
+        ),
       ],
     );
   }

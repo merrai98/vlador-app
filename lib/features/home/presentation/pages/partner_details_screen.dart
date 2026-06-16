@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/utils/helper_function.dart';
 import '../../data/models/models.dart';
 import '../bloc/product_quantity_cubit.dart';
+import '../../../../core/widgets/design/design_widgets.dart';
 import 'product_summary_screen.dart';
 
 class PartnerDetailsScreen extends StatefulWidget {
@@ -82,6 +83,12 @@ class _PartnerDetailsScreenState extends State<PartnerDetailsScreen> {
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
+                  actions: [
+                    Padding(
+                      padding: EdgeInsets.only(right: 12.w),
+                      child: const Center(child: NetworkStatusBadge()),
+                    ),
+                  ],
                   flexibleSpace: FlexibleSpaceBar(
                     centerTitle: true,
                     expandedTitleScale: 1.1,
